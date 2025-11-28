@@ -10,15 +10,23 @@ export default function GalleryPage() {
   const [images, setImages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const token = localStorage.getItem('token');
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!token) {
+    const storedToken = localStorage.getItem('token');
+    setToken(storedToken);
+    
+    if (!storedToken) {
       router.push('/login');
       return;
     }
-    fetchImages();
-  }, [page, router, token]);
+  }, [router]);
+
+  useEffect(() => {
+    if (token) {
+      fetchImages();
+    }
+  }, [page, token]);
 
   const fetchImages = async () => {
     try {

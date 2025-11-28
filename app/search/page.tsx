@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Container,
@@ -15,11 +15,12 @@ import {
   TextField,
   IconButton,
   Paper,
+  CircularProgress,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import axios from 'axios';
 
-export default function SearchPage() {
+function SearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const q = searchParams.get('q') || '';
@@ -124,5 +125,17 @@ export default function SearchPage() {
         </List>
       </Box>
     </Container>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <Container maxWidth="md" sx={{ py: 4, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <CircularProgress />
+      </Container>
+    }>
+      <SearchContent />
+    </Suspense>
   );
 }

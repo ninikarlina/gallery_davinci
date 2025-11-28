@@ -23,15 +23,23 @@ export default function BooksPage() {
   const [books, setBooks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const token = localStorage.getItem('token');
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!token) {
+    const storedToken = localStorage.getItem('token');
+    setToken(storedToken);
+    
+    if (!storedToken) {
       router.push('/login');
       return;
     }
-    fetchBooks();
-  }, [page, router, token]);
+  }, [router]);
+
+  useEffect(() => {
+    if (token) {
+      fetchBooks();
+    }
+  }, [page, token]);
 
   const fetchBooks = async () => {
     try {
