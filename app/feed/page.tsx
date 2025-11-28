@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import UnifiedUploadForm from '@/app/components/UnifiedUploadForm';
@@ -16,13 +16,19 @@ import {
   Alert,
 } from '@mui/material';
 
+const ITEMS_PER_PAGE = 20;
+
 export default function FeedPage() {
   const router = useRouter();
   const [feedItems, setFeedItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [error, setError] = useState('');
   const [mounted, setMounted] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const observerTarget = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -32,42 +38,102 @@ export default function FeedPage() {
     } else {
       setUser(JSON.parse(userData));
     }
-    fetchAllContent();
   }, [router]);
 
-  const fetchAllContent = async () => {
+  useEffect(() => {
+    if (mounted && user) {
+      fetchAllContent(1, true);
+    }
+  }, [mounted, user]);
+
+  // Infinite scroll observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+          loadMoreContent();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentTarget = observerTarget.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
+    }
+
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+      }
+    };
+  }, [hasMore, loading, loadingMore, page]);
+
+  const fetchAllContent = async (pageNum: number, isInitial = false) => {
     try {
-      setLoading(true);
+      if (isInitial) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
       setError('');
       
-      // Fetch semua konten secara paralel
+      // Fetch semua konten secara paralel dengan pagination
       const [postsRes, booksRes, imagesRes] = await Promise.all([
-        axios.get('/api/posts?page=1'),
-        axios.get('/api/books?page=1'),
-        axios.get('/api/upload/images?page=1'),
+        axios.get(`/api/posts?page=${pageNum}&limit=10`),
+        axios.get(`/api/books?page=${pageNum}&limit=5`),
+        axios.get(`/api/upload/images?page=${pageNum}&limit=5`),
       ]);
 
       // Gabungkan semua konten dan tambahkan tipe
-      const allItems = [
+      const newItems = [
         ...postsRes.data.posts.map((item: any) => ({ ...item, contentType: 'post' })),
         ...booksRes.data.books.map((item: any) => ({ ...item, contentType: 'book' })),
         ...imagesRes.data.images.map((item: any) => ({ ...item, contentType: 'image' })),
       ];
 
       // Sort berdasarkan tanggal terbaru
-      allItems.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      newItems.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
-      setFeedItems(allItems);
+      // Ambil 20 item pertama untuk batch ini
+      const limitedItems = newItems.slice(0, ITEMS_PER_PAGE);
+      
+      if (isInitial) {
+        setFeedItems(limitedItems);
+      } else {
+        setFeedItems(prev => [...prev, ...limitedItems]);
+      }
+
+      // Check apakah masih ada data
+      const totalFetched = postsRes.data.posts.length + booksRes.data.books.length + imagesRes.data.images.length;
+      setHasMore(totalFetched >= ITEMS_PER_PAGE);
+      
     } catch (err) {
       console.error('Error fetching content:', err);
       setError('Gagal memuat konten');
+      setHasMore(false);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
+  const loadMoreContent = useCallback(() => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchAllContent(nextPage, false);
+  }, [page]);
+
   const handlePostCreated = () => {
-    fetchAllContent();
+    setPage(1);
+    setHasMore(true);
+    fetchAllContent(1, true);
+  };
+
+  const handleRefresh = () => {
+    setPage(1);
+    setHasMore(true);
+    fetchAllContent(1, true);
   };
 
   const renderFeedItem = (item: any) => {
@@ -77,8 +143,8 @@ export default function FeedPage() {
         <PostCard
           key={item.id}
           post={item}
-          onRefresh={fetchAllContent}
-          onDelete={fetchAllContent}
+          onRefresh={handleRefresh}
+          onDelete={handleRefresh}
         />
       );
     }
@@ -89,8 +155,8 @@ export default function FeedPage() {
         <BookCard
           key={item.id}
           book={item}
-          onRefresh={fetchAllContent}
-          onDelete={fetchAllContent}
+          onRefresh={handleRefresh}
+          onDelete={handleRefresh}
         />
       );
     }
@@ -101,8 +167,8 @@ export default function FeedPage() {
         <ImageCard
           key={item.id}
           image={item}
-          onRefresh={fetchAllContent}
-          onDelete={fetchAllContent}
+          onRefresh={handleRefresh}
+          onDelete={handleRefresh}
         />
       );
     }
@@ -131,9 +197,33 @@ export default function FeedPage() {
             <CircularProgress sx={{ color: '#ffffff' }} />
           </Box>
         ) : feedItems.length > 0 ? (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 3 }}>
-            {feedItems.map((item) => renderFeedItem(item))}
-          </Box>
+          <>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 3 }}>
+              {feedItems.map((item) => renderFeedItem(item))}
+            </Box>
+
+            {/* Infinite scroll trigger */}
+            <div ref={observerTarget} style={{ height: '20px', margin: '20px 0' }}>
+              {loadingMore && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress size={30} sx={{ color: '#ffffff' }} />
+                </Box>
+              )}
+            </div>
+
+            {!hasMore && feedItems.length > 0 && (
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  textAlign: 'center', 
+                  color: '#808080', 
+                  py: 4 
+                }}
+              >
+                Tidak ada konten lagi
+              </Typography>
+            )}
+          </>
         ) : (
           <Paper sx={{ backgroundColor: '#1e1e1e', p: 6, textAlign: 'center', borderRadius: 2, mt: 3 }}>
             <Typography variant="h6" sx={{ color: '#b0b0b0', mb: 2 }}>

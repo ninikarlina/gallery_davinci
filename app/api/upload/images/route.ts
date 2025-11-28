@@ -10,7 +10,7 @@ const MAX_FILES = 15;
 export async function GET(req: NextRequest) {
   try {
     const page = parseInt(req.nextUrl.searchParams.get('page') || '1');
-    const limit = 12;
+    const limit = parseInt(req.nextUrl.searchParams.get('limit') || '12');
     const skip = (page - 1) * limit;
 
     const images = await prisma.image.findMany({

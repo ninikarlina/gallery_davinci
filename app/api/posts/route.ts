@@ -5,7 +5,7 @@ import { verifyToken } from '@/lib/auth/jwt';
 export async function GET(req: NextRequest) {
   try {
     const page = parseInt(req.nextUrl.searchParams.get('page') || '1');
-    const limit = 10;
+    const limit = parseInt(req.nextUrl.searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
 
     const posts = await prisma.post.findMany({
