@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
-import fs from 'fs/promises';
-import path from 'path';
+import { deleteFromBlob } from '@/lib/storage/blob';
 
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -171,15 +170,15 @@ export async function DELETE(
       return NextResponse.json({ error: 'Anda tidak memiliki akses untuk menghapus gambar ini' }, { status: 403 });
     }
 
-    // Delete all image files from ImageItem
+    // Delete all image files from Vercel Blob
     if (existingImage.images && existingImage.images.length > 0) {
       for (const imageItem of existingImage.images) {
         if (imageItem.filePath) {
           try {
-            await fs.unlink(imageItem.filePath);
-            console.log(`Deleted file: ${imageItem.filePath}`);
+            await deleteFromBlob(imageItem.filePath);
+            console.log(`Deleted blob: ${imageItem.filePath}`);
           } catch (err) {
-            console.error('Error deleting image file:', imageItem.filePath, err);
+            console.error('Error deleting blob:', imageItem.filePath, err);
           }
         }
       }

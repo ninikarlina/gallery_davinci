@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, unlink } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
 import prisma from '@/lib/db/prisma';
 import { verifyToken } from '@/lib/auth/jwt';
+import { uploadBufferToBlob, deleteFromBlob } from '@/lib/storage/blob';
 
 export async function POST(
   request: NextRequest,
@@ -59,36 +57,31 @@ export async function POST(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Delete old avatar if exists
-    if (user.avatar) {
-      const oldAvatarPath = join(process.cwd(), 'public', user.avatar);
-      if (existsSync(oldAvatarPath)) {
-        await unlink(oldAvatarPath);
+    // Delete old avatar from Vercel Blob if exists
+    if (user.avatar && user.avatar.startsWith('https://')) {
+      try {
+        await deleteFromBlob(user.avatar);
+        console.log(`Deleted old avatar blob: ${user.avatar}`);
+      } catch (err) {
+        console.error('Error deleting old avatar:', err);
       }
     }
 
-    // Create uploads/avatars directory if it doesn't exist
-    const uploadsDir = join(process.cwd(), 'public', 'uploads', 'avatars');
-    if (!existsSync(uploadsDir)) {
-      const { mkdirSync } = await import('fs');
-      mkdirSync(uploadsDir, { recursive: true });
-    }
-
-    // Generate unique filename
-    const fileExtension = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${userId}.${fileExtension}`;
-    const filePath = join(uploadsDir, fileName);
-
-    // Save file
+    // Upload to Vercel Blob
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
+    
+    const { url } = await uploadBufferToBlob(
+      buffer,
+      file.name,
+      'avatars',
+      file.type
+    );
 
     // Update user avatar in database
-    const avatarUrl = `/uploads/avatars/${fileName}`;
     const updatedUser = await prisma.user.update({
       where: { id: userId },
-      data: { avatar: avatarUrl },
+      data: { avatar: url },
       select: {
         id: true,
         email: true,
@@ -146,10 +139,14 @@ export async function DELETE(
       return NextResponse.json({ error: 'No avatar to delete' }, { status: 400 });
     }
 
-    // Delete avatar file
-    const avatarPath = join(process.cwd(), 'public', user.avatar);
-    if (existsSync(avatarPath)) {
-      await unlink(avatarPath);
+    // Delete avatar from Vercel Blob
+    if (user.avatar.startsWith('https://')) {
+      try {
+        await deleteFromBlob(user.avatar);
+        console.log(`Deleted avatar blob: ${user.avatar}`);
+      } catch (err) {
+        console.error('Error deleting avatar:', err);
+      }
     }
 
     // Update user to remove avatar

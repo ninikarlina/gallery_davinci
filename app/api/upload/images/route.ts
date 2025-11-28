@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/prisma';
 import { verifyToken } from '@/lib/auth/jwt';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
-import { existsSync } from 'fs';
+import { uploadBufferToBlob } from '@/lib/storage/blob';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -110,12 +108,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadDir = path.join(process.cwd(), 'public/uploads/images');
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
-
     // Create main image entry
     const image = await prisma.image.create({
       data: {
@@ -125,26 +117,27 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Upload all files and create ImageItem entries
+    // Upload all files to Vercel Blob and create ImageItem entries
     const imageItems = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
 
-      // Generate unique filename
-      const fileName = `${Date.now()}-${i}-${file.name}`;
-      const filePath = path.join(uploadDir, fileName);
-
-      // Save file
-      await writeFile(filePath, buffer);
+      // Upload to Vercel Blob
+      const { url } = await uploadBufferToBlob(
+        buffer,
+        file.name,
+        'images',
+        file.type
+      );
 
       // Create ImageItem entry
       const imageItem = await prisma.imageItem.create({
         data: {
           imageId: image.id,
-          imageUrl: `/uploads/images/${fileName}`,
-          filePath: filePath,
+          imageUrl: url,
+          filePath: url, // Store blob URL for deletion
           order: i,
         },
       });

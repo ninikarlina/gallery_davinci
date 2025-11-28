@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
-import fs from 'fs/promises';
-import path from 'path';
+import { deleteFromBlob } from '@/lib/storage/blob';
 
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -172,13 +171,13 @@ export async function DELETE(
       where: { bookId: id },
     });
 
-    // Delete PDF file
-    if (existingBook.pdfUrl) {
-      const filePath = path.join(process.cwd(), 'public', existingBook.pdfUrl);
+    // Delete PDF file from Vercel Blob
+    if (existingBook.filePath) {
       try {
-        await fs.unlink(filePath);
+        await deleteFromBlob(existingBook.filePath);
+        console.log(`Deleted blob: ${existingBook.filePath}`);
       } catch (err) {
-        console.error('Error deleting PDF file:', err);
+        console.error('Error deleting blob:', err);
       }
     }
 

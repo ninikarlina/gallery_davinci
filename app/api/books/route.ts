@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/prisma';
 import { verifyToken } from '@/lib/auth/jwt';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
-import { existsSync } from 'fs';
+import { uploadBufferToBlob } from '@/lib/storage/blob';
 
 export async function GET(req: NextRequest) {
   try {
@@ -88,18 +86,13 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Create uploads directory if it doesn't exist
-    const uploadDir = path.join(process.cwd(), 'public/uploads/books');
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
-
-    // Generate unique filename
-    const fileName = `${Date.now()}-${file.name}`;
-    const filePath = path.join(uploadDir, fileName);
-
-    // Save file
-    await writeFile(filePath, buffer);
+    // Upload to Vercel Blob
+    const { url } = await uploadBufferToBlob(
+      buffer,
+      file.name,
+      'books',
+      'application/pdf'
+    );
 
     // Create book entry with Prisma
     const book = await prisma.book.create({
@@ -107,8 +100,8 @@ export async function POST(req: NextRequest) {
         authorId: decoded.userId,
         title,
         description,
-        pdfUrl: `/uploads/books/${fileName}`,
-        filePath: filePath,
+        pdfUrl: url,
+        filePath: url, // Store blob URL for deletion
         fileSize: buffer.length,
       },
       include: { author: { select: { username: true, fullName: true } } },
