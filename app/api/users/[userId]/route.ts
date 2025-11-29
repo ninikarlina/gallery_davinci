@@ -43,6 +43,11 @@ export async function GET(
       where: { authorId: userId },
       include: { 
         author: { select: { id: true, username: true, fullName: true, avatar: true } },
+        comments: {
+          include: {
+            author: { select: { id: true, username: true, fullName: true, avatar: true } },
+          },
+        },
         likes: true,
       },
       orderBy: { createdAt: 'desc' },
@@ -52,6 +57,12 @@ export async function GET(
       where: { authorId: userId },
       include: { 
         author: { select: { id: true, username: true, fullName: true, avatar: true } },
+        images: { orderBy: { order: 'asc' } },
+        comments: {
+          include: {
+            author: { select: { id: true, username: true, fullName: true, avatar: true } },
+          },
+        },
         likes: true,
       },
       orderBy: { createdAt: 'desc' },

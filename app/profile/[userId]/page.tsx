@@ -550,6 +550,9 @@ function ContentCard({ content, isOwnContent, onDelete, onRefresh }: {
 
   // Render Image
   if (content.contentType === 'image') {
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const imageItems = content.images || [];
+
     return (
       <>
         <Card sx={{ backgroundColor: '#1e1e1e', color: '#ffffff' }}>
@@ -610,19 +613,78 @@ function ContentCard({ content, isOwnContent, onDelete, onRefresh }: {
               </>
             )}
 
-            {/* Image */}
-            <Box
-              component="img"
-              src={content.imageUrl}
-              alt={content.title}
-              sx={{
-                width: '100%',
-                maxHeight: 400,
-                objectFit: 'cover',
-                borderRadius: 2,
-                mb: 2,
-              }}
-            />
+            {/* Image Carousel */}
+            {imageItems.length > 0 ? (
+              <Box sx={{ position: 'relative', mb: 2 }}>
+                <Box
+                  component="img"
+                  src={imageItems[currentImageIndex]?.imageUrl}
+                  alt={`${content.title}-${currentImageIndex}`}
+                  sx={{
+                    width: '100%',
+                    maxHeight: 500,
+                    objectFit: 'contain',
+                    borderRadius: 2,
+                    backgroundColor: '#000000',
+                  }}
+                />
+                
+                {/* Navigation Arrows */}
+                {imageItems.length > 1 && (
+                  <>
+                    <IconButton
+                      onClick={() => setCurrentImageIndex((prev) => (prev === 0 ? imageItems.length - 1 : prev - 1))}
+                      sx={{
+                        position: 'absolute',
+                        left: 8,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        color: '#ffffff',
+                        '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.7)' },
+                      }}
+                    >
+                      ‹
+                    </IconButton>
+                    <IconButton
+                      onClick={() => setCurrentImageIndex((prev) => (prev === imageItems.length - 1 ? 0 : prev + 1))}
+                      sx={{
+                        position: 'absolute',
+                        right: 8,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        color: '#ffffff',
+                        '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.7)' },
+                      }}
+                    >
+                      ›
+                    </IconButton>
+                    
+                    {/* Image Counter */}
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        bottom: 8,
+                        right: 8,
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        color: '#ffffff',
+                        px: 1.5,
+                        py: 0.5,
+                        borderRadius: 1,
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      {currentImageIndex + 1} / {imageItems.length}
+                    </Box>
+                  </>
+                )}
+              </Box>
+            ) : (
+              <Typography variant="body2" sx={{ color: '#808080', mb: 2 }}>
+                Tidak ada gambar
+              </Typography>
+            )}
 
             {/* Date */}
             <Typography variant="caption" sx={{ color: '#808080', display: 'block' }}>
