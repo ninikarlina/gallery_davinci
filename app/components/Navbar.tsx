@@ -65,7 +65,32 @@ export default function Navbar() {
   }
 
   if (!mounted) {
-    return null;
+    return (
+      <AppBar position="sticky" sx={{ backgroundColor: '#000000', borderBottom: '1px solid #333333' }}>
+        <Toolbar sx={{ justifyContent: 'space-between', py: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Image
+              src="/logo.png"
+              alt="Gallery Davinci Logo"
+              width={40}
+              height={40}
+              style={{ objectFit: 'contain' }}
+            />
+            <Typography
+              variant="h5"
+              component="div"
+              sx={{ 
+                fontWeight: 'bold', 
+                color: '#ffffff',
+                fontSize: { xs: '1.1rem', sm: '1.5rem' }
+              }}
+            >
+              Gallery Davinci
+            </Typography>
+          </Box>
+        </Toolbar>
+      </AppBar>
+    );
   }
 
   return (

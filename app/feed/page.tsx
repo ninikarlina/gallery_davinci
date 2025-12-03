@@ -173,7 +173,15 @@ export default function FeedPage() {
   };
 
   if (!mounted) {
-    return null;
+    return (
+      <Box sx={{ backgroundColor: '#121212', minHeight: '100vh' }}>
+        <Container maxWidth="md" sx={{ py: 4, px: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+            <CircularProgress sx={{ color: '#ffffff' }} />
+          </Box>
+        </Container>
+      </Box>
+    );
   }
 
   return (

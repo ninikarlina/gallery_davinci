@@ -54,7 +54,11 @@ export default function RegisterForm() {
   };
 
   if (!mounted) {
-    return null;
+    return (
+      <Box sx={{ backgroundColor: '#000000', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <CircularProgress sx={{ color: '#ffffff' }} />
+      </Box>
+    );
   }
 
   return (

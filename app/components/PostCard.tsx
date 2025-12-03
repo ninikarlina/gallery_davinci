@@ -82,13 +82,21 @@ export default function PostCard({ post, onDelete, onRefresh }: PostCardProps) {
       router.push('/login');
       return;
     }
+    
+    // Optimistic update - update UI immediately
+    const previousLiked = liked;
+    const previousLikes = likes;
+    setLiked(!liked);
+    setLikes(liked ? likes - 1 : likes + 1);
+    
     try {
       await axios.post(`/api/posts/${post.id}/like`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setLiked(!liked);
-      setLikes(liked ? likes - 1 : likes + 1);
     } catch (error) {
+      // Revert on error
+      setLiked(previousLiked);
+      setLikes(previousLikes);
       console.error('Error liking post:', error);
     }
   };
@@ -114,7 +122,7 @@ export default function PostCard({ post, onDelete, onRefresh }: PostCardProps) {
         id: response.data.comment?.id || Date.now().toString(),
         content: commentText,
         createdAt: new Date().toISOString(),
-        user: {
+        author: {
           id: currentUser.id,
           fullName: currentUser.fullName,
           username: currentUser.username,
