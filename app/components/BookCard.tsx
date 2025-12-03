@@ -77,6 +77,10 @@ export default function BookCard({ book, onDelete, onRefresh }: BookCardProps) {
   }, [book.likes]);
 
   const handleLike = async () => {
+    if (!currentUser || !token) {
+      router.push('/login');
+      return;
+    }
     try {
       await axios.post(`/api/books/${book.id}/like`, {}, {
         headers: { Authorization: `Bearer ${token}` },
@@ -91,6 +95,10 @@ export default function BookCard({ book, onDelete, onRefresh }: BookCardProps) {
 
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser || !token) {
+      router.push('/login');
+      return;
+    }
     if (!commentText.trim()) return;
 
     setLoading(true);

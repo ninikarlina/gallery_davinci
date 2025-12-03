@@ -77,6 +77,10 @@ export default function PostCard({ post, onDelete, onRefresh }: PostCardProps) {
   }, [post.likes]);
 
   const handleLike = async () => {
+    if (!currentUser || !token) {
+      router.push('/login');
+      return;
+    }
     try {
       await axios.post(`/api/posts/${post.id}/like`, {}, {
         headers: { Authorization: `Bearer ${token}` },
@@ -91,6 +95,10 @@ export default function PostCard({ post, onDelete, onRefresh }: PostCardProps) {
 
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser || !token) {
+      router.push('/login');
+      return;
+    }
     if (!commentText.trim()) return;
 
     setLoading(true);

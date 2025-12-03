@@ -87,6 +87,10 @@ export default function ImageCard({ image, onDelete, onRefresh }: ImageCardProps
   }, [image.likes]);
 
   const handleLike = async () => {
+    if (!currentUser || !token) {
+      router.push('/login');
+      return;
+    }
     try {
       await axios.post(`/api/upload/images/${image.id}/like`, {}, {
         headers: { Authorization: `Bearer ${token}` },
@@ -101,6 +105,10 @@ export default function ImageCard({ image, onDelete, onRefresh }: ImageCardProps
 
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser || !token) {
+      router.push('/login');
+      return;
+    }
     if (!commentText.trim()) return;
 
     setLoading(true);

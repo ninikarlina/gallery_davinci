@@ -14,6 +14,7 @@ import {
   Typography,
   CircularProgress,
   Alert,
+  Button,
 } from '@mui/material';
 
 const ITEMS_PER_PAGE = 20;
@@ -33,18 +34,16 @@ export default function FeedPage() {
   useEffect(() => {
     setMounted(true);
     const userData = localStorage.getItem('user');
-    if (!userData) {
-      router.push('/login');
-    } else {
+    if (userData) {
       setUser(JSON.parse(userData));
     }
+    // Load content regardless of login status
+    fetchAllContent(1, true);
   }, [router]);
 
   useEffect(() => {
-    if (mounted && user) {
-      fetchAllContent(1, true);
-    }
-  }, [mounted, user]);
+    // Remove dependency on user for fetching content
+  }, []);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -190,7 +189,48 @@ export default function FeedPage() {
         }}
       >
         
-        <UnifiedUploadForm onUploadSuccess={handlePostCreated} />
+        {user ? (
+          <UnifiedUploadForm onUploadSuccess={handlePostCreated} />
+        ) : (
+          <Paper sx={{ 
+            p: { xs: 2, sm: 3 }, 
+            backgroundColor: '#1e1e1e', 
+            borderRadius: 2,
+            mb: 3,
+            textAlign: 'center',
+          }}>
+            <Typography variant="h6" sx={{ color: '#ffffff', mb: 1 }}>
+              Selamat Datang di Gallery DaVinci
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#b0b0b0', mb: 2 }}>
+              Login untuk membagikan karya seni Anda
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+              <Button
+                variant="contained"
+                onClick={() => router.push('/login')}
+                sx={{
+                  backgroundColor: '#ffffff',
+                  color: '#000000',
+                  '&:hover': { backgroundColor: '#e0e0e0' },
+                }}
+              >
+                Login
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => router.push('/register')}
+                sx={{
+                  borderColor: '#404040',
+                  color: '#ffffff',
+                  '&:hover': { borderColor: '#ffffff', backgroundColor: '#333333' },
+                }}
+              >
+                Daftar
+              </Button>
+            </Box>
+          </Paper>
+        )}
 
         {error && (
           <Alert severity="error" sx={{ mt: 3, mb: 3 }}>

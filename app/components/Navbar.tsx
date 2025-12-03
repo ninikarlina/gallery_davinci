@@ -131,7 +131,7 @@ export default function Navbar() {
                 Beranda
               </Button>
 
-            {user && (
+            {user ? (
               <>
                 <NotificationBell />
                 <Button
@@ -170,6 +170,38 @@ export default function Navbar() {
                   Logout
                 </Button>
               </>
+            ) : (
+              <>
+                <Button
+                  component={Link}
+                  href="/login"
+                  variant="contained"
+                  sx={{
+                    backgroundColor: '#ffffff',
+                    color: '#000000',
+                    '&:hover': {
+                      backgroundColor: '#e0e0e0',
+                    },
+                  }}
+                >
+                  Login
+                </Button>
+                <Button
+                  component={Link}
+                  href="/register"
+                  variant="outlined"
+                  sx={{
+                    borderColor: '#404040',
+                    color: '#ffffff',
+                    '&:hover': {
+                      borderColor: '#ffffff',
+                      backgroundColor: '#333333',
+                    },
+                  }}
+                >
+                  Daftar
+                </Button>
+              </>
             )}
             </Box>
           </Box>
@@ -205,7 +237,7 @@ export default function Navbar() {
               <MenuItem component={Link} href="/feed" onClick={handleMenuClose}>
                 <HomeIcon sx={{ mr: 1 }} /> Beranda
               </MenuItem>
-              {user && [
+              {user ? [
                 <MenuItem key="profile" component={Link} href={`/profile/${user.id}`} onClick={handleMenuClose}>
                   <Avatar
                     src={user.avatar || undefined}
@@ -223,6 +255,13 @@ export default function Navbar() {
                 </MenuItem>,
                 <MenuItem key="logout" onClick={handleLogout}>
                   <LogoutIcon sx={{ mr: 1 }} /> Logout
+                </MenuItem>
+              ] : [
+                <MenuItem key="login" component={Link} href="/login" onClick={handleMenuClose}>
+                  Login
+                </MenuItem>,
+                <MenuItem key="register" component={Link} href="/register" onClick={handleMenuClose}>
+                  Daftar
                 </MenuItem>
               ]}
             </Menu>
