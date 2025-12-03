@@ -551,6 +551,8 @@ function ContentCard({ content, isOwnContent, onDelete, onRefresh }: {
   // Render Image
   if (content.contentType === 'image') {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [dragOffset, setDragOffset] = useState(0);
+    const [isDragging, setIsDragging] = useState(false);
     const imageItems = content.images || [];
     
     // Swipe gesture states
@@ -561,14 +563,28 @@ function ContentCard({ content, isOwnContent, onDelete, onRefresh }: {
     // Swipe gesture handlers
     const handleTouchStart = (e: React.TouchEvent) => {
       touchStartX.current = e.touches[0].clientX;
+      setIsDragging(true);
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
+      if (!touchStartX.current) return;
+      
       touchEndX.current = e.touches[0].clientX;
+      const diff = touchEndX.current - touchStartX.current;
+      
+      // Apply drag offset with resistance at edges
+      if (imageItems.length > 1) {
+        setDragOffset(diff * 0.5); // 0.5 for resistance effect
+      }
     };
 
     const handleTouchEnd = () => {
-      if (!touchStartX.current || !touchEndX.current) return;
+      setIsDragging(false);
+      
+      if (!touchStartX.current || !touchEndX.current) {
+        setDragOffset(0);
+        return;
+      }
       
       const swipeDistance = touchStartX.current - touchEndX.current;
       const minSwipeDistance = 50;
@@ -581,6 +597,7 @@ function ContentCard({ content, isOwnContent, onDelete, onRefresh }: {
         }
       }
 
+      setDragOffset(0);
       touchStartX.current = 0;
       touchEndX.current = 0;
     };
@@ -681,6 +698,9 @@ function ContentCard({ content, isOwnContent, onDelete, onRefresh }: {
                     objectFit: 'contain',
                     userSelect: 'none',
                     WebkitUserDrag: 'none',
+                    transform: `translateX(${dragOffset}px)`,
+                    transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    willChange: 'transform',
                   }}
                 />
                 
