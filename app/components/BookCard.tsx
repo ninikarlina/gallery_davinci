@@ -50,6 +50,7 @@ export default function BookCard({ book, onDelete, onRefresh }: BookCardProps) {
 
   const [likes, setLikes] = useState(book.likes?.length || 0);
   const [liked, setLiked] = useState(false);
+  const [comments, setComments] = useState(book.comments || []);
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -87,7 +88,6 @@ export default function BookCard({ book, onDelete, onRefresh }: BookCardProps) {
       });
       setLiked(!liked);
       setLikes(liked ? likes - 1 : likes + 1);
-      onRefresh?.();
     } catch (error) {
       console.error('Error liking book:', error);
     }
@@ -103,13 +103,26 @@ export default function BookCard({ book, onDelete, onRefresh }: BookCardProps) {
 
     setLoading(true);
     try {
-      await axios.post(
+      const response = await axios.post(
         `/api/books/${book.id}/comments`,
         { text: commentText },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      
+      // Update local comments state
+      const newComment = {
+        id: response.data.comment?.id || Date.now().toString(),
+        content: commentText,
+        createdAt: new Date().toISOString(),
+        user: {
+          id: currentUser.id,
+          fullName: currentUser.fullName,
+          username: currentUser.username,
+          avatar: currentUser.avatar,
+        },
+      };
+      setComments([...comments, newComment]);
       setCommentText('');
-      onRefresh?.();
     } catch (error) {
       console.error('Error adding comment:', error);
     } finally {
@@ -166,7 +179,8 @@ export default function BookCard({ book, onDelete, onRefresh }: BookCardProps) {
       await axios.delete(`/api/comments/${commentId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      onRefresh?.();
+      // Update local state
+      setComments(comments.filter((c: any) => c.id !== commentId));
     } catch (error) {
       console.error('Error deleting comment:', error);
       alert('Gagal menghapus komentar');
@@ -182,9 +196,12 @@ export default function BookCard({ book, onDelete, onRefresh }: BookCardProps) {
         { content: editCommentText },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      // Update local state
+      setComments(comments.map((c: any) => 
+        c.id === commentId ? { ...c, content: editCommentText } : c
+      ));
       setEditingCommentId(null);
       setEditCommentText('');
-      onRefresh?.();
     } catch (error) {
       console.error('Error editing comment:', error);
       alert('Gagal mengubah komentar');
@@ -352,7 +369,7 @@ export default function BookCard({ book, onDelete, onRefresh }: BookCardProps) {
           <MenuItem
             onClick={() => {
               if (activeCommentId) {
-                const comment = book.comments?.find((c: any) => c.id === activeCommentId);
+                const comment = comments?.find((c: any) => c.id === activeCommentId);
                 if (comment) {
                   startEditComment(activeCommentId, comment.content);
                 }
@@ -472,7 +489,7 @@ export default function BookCard({ book, onDelete, onRefresh }: BookCardProps) {
               '&:hover': { backgroundColor: '#333333' },
             }}
           >
-            {book.comments?.length || 0}
+            {comments?.length || 0}
           </Button>
         </Box>
 
@@ -481,8 +498,8 @@ export default function BookCard({ book, onDelete, onRefresh }: BookCardProps) {
           <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #333333' }}>
             {/* Comments List */}
             <Box sx={{ maxHeight: 300, overflowY: 'auto', mb: 2 }}>
-              {book.comments && book.comments.length > 0 ? (
-                book.comments.map((comment: any, idx: number) => {
+              {comments && comments.length > 0 ? (
+                comments.map((comment: any, idx: number) => {
                   const commentAuthorName = comment.author?.username || comment.author?.fullName || 'Anonim';
                   const commentAuthorAvatar = comment.author?.avatar;
                   const commentAuthorInitial = commentAuthorName.charAt(0).toUpperCase();
