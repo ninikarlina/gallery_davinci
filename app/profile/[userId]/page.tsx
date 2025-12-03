@@ -1266,25 +1266,26 @@ export default function ProfilePage() {
           {/* Right: User Info Table */}
           <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
             {!isEditing ? (
-              <Box
-                component="table"
-                sx={{
-                  width: '100%',
-                  borderCollapse: 'separate',
-                  borderSpacing: 0,
-                  tableLayout: 'fixed',
-                  '& td': {
-                    padding: { xs: '6px 2px', sm: '10px 8px' },
-                    borderBottom: '1px solid #333333',
-                    fontSize: { xs: '0.7rem', sm: '0.875rem', md: '1rem' },
-                    wordBreak: 'break-word',
-                    overflow: 'hidden',
-                  },
-                  '& tr:last-child td': {
-                    borderBottom: 'none',
-                  },
-                }}
-              >
+              <>
+                <Box
+                  component="table"
+                  sx={{
+                    width: '100%',
+                    borderCollapse: 'separate',
+                    borderSpacing: 0,
+                    tableLayout: 'fixed',
+                    '& td': {
+                      padding: { xs: '6px 2px', sm: '10px 8px' },
+                      borderBottom: '1px solid #333333',
+                      fontSize: { xs: '0.7rem', sm: '0.875rem', md: '1rem' },
+                      wordBreak: 'break-word',
+                      overflow: 'hidden',
+                    },
+                    '& tr:last-child td': {
+                      borderBottom: 'none',
+                    },
+                  }}
+                >
                 <tbody>
                   <tr>
                     <td style={{ color: '#b0b0b0', width: '35%', fontWeight: 500 }}>Nama</td>
@@ -1320,18 +1321,6 @@ export default function ProfilePage() {
                       </Box>
                     </td>
                   </tr>
-                  {user.bio && (
-                    <tr>
-                      <td style={{ color: '#b0b0b0', fontWeight: 500, verticalAlign: 'top' }}>Bio</td>
-                      <td style={{ 
-                        color: '#ffffff', 
-                        whiteSpace: 'pre-wrap',
-                        wordBreak: 'break-word',
-                      }}>
-                        {user.bio}
-                      </td>
-                    </tr>
-                  )}
                   <tr>
                     <td style={{ color: '#b0b0b0', fontWeight: 500 }}>Konten</td>
                     <td style={{ color: '#ffffff' }}>{allContent.length} item</td>
@@ -1348,6 +1337,40 @@ export default function ProfilePage() {
                   </tr>
                 </tbody>
               </Box>
+              
+              {/* Bio Section - Separate below table */}
+              {user.bio && (
+                <Box sx={{ 
+                  mt: { xs: 2, sm: 3 },
+                  pt: { xs: 2, sm: 3 },
+                  borderTop: '1px solid #333333',
+                }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: '#b0b0b0', 
+                      fontWeight: 500,
+                      mb: 1,
+                      fontSize: { xs: '0.7rem', sm: '0.875rem' },
+                    }}
+                  >
+                    Bio
+                  </Typography>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: '#ffffff',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      fontSize: { xs: '0.75rem', sm: '0.875rem', md: '1rem' },
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {user.bio}
+                  </Typography>
+                </Box>
+              )}
+              </>
             ) : (
               <Box>
                 <TextField

@@ -55,6 +55,8 @@ export default function Navbar() {
     localStorage.removeItem('user');
     handleMenuClose();
     router.push('/login');
+    // Refresh page to clear all cached data
+    window.location.reload();
   };
 
   // Don't show navbar on auth pages

@@ -44,6 +44,8 @@ export default function LoginForm() {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
       router.push('/feed');
+      // Refresh page to update all components with new auth state
+      window.location.reload();
     } catch (err: any) {
       if (err.response?.data?.error) {
         setError(err.response.data.error);
