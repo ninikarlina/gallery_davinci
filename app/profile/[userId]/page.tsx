@@ -976,7 +976,10 @@ export default function ProfilePage() {
 
   useEffect(() => {
     // Set client-side data
-    setCurrentUser(JSON.parse(localStorage.getItem('user') || '{}'));
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setCurrentUser(JSON.parse(userData));
+    }
     setToken(localStorage.getItem('token'));
     fetchUserProfile();
   }, [userId]);
