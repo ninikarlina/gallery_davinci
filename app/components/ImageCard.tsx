@@ -66,6 +66,8 @@ export default function ImageCard({ image, onDelete, onRefresh }: ImageCardProps
   const [commentMenuAnchor, setCommentMenuAnchor] = useState<null | HTMLElement>(null);
   const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
   
   // Swipe gesture states
   const touchStartX = useRef<number>(0);
@@ -251,14 +253,28 @@ export default function ImageCard({ image, onDelete, onRefresh }: ImageCardProps
   // Swipe gesture handlers
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
+    setIsDragging(true);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartX.current) return;
+    
     touchEndX.current = e.touches[0].clientX;
+    const diff = touchEndX.current - touchStartX.current;
+    
+    // Apply drag offset with resistance at edges
+    if (imageItems.length > 1) {
+      setDragOffset(diff * 0.5); // 0.5 for resistance effect
+    }
   };
 
   const handleTouchEnd = () => {
-    if (!touchStartX.current || !touchEndX.current) return;
+    setIsDragging(false);
+    
+    if (!touchStartX.current || !touchEndX.current) {
+      setDragOffset(0);
+      return;
+    }
     
     const swipeDistance = touchStartX.current - touchEndX.current;
     const minSwipeDistance = 50; // Minimum swipe distance in pixels
@@ -274,6 +290,7 @@ export default function ImageCard({ image, onDelete, onRefresh }: ImageCardProps
     }
 
     // Reset
+    setDragOffset(0);
     touchStartX.current = 0;
     touchEndX.current = 0;
   };
@@ -494,6 +511,9 @@ export default function ImageCard({ image, onDelete, onRefresh }: ImageCardProps
                 objectFit: 'contain',
                 userSelect: 'none',
                 WebkitUserDrag: 'none',
+                transform: `translateX(${dragOffset}px)`,
+                transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                willChange: 'transform',
               }}
             />
             

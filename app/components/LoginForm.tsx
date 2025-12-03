@@ -45,7 +45,15 @@ export default function LoginForm() {
       localStorage.setItem('user', JSON.stringify(response.data.user));
       router.push('/feed');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed');
+      if (err.response?.data?.error) {
+        setError(err.response.data.error);
+      } else if (err.response?.status === 401) {
+        setError('Email atau password salah. Silakan coba lagi.');
+      } else if (err.response?.status === 500) {
+        setError('Terjadi kesalahan server. Silakan coba lagi nanti.');
+      } else {
+        setError('Login gagal. Periksa koneksi internet Anda.');
+      }
     } finally {
       setLoading(false);
     }

@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
     // Validate input
     if (!email || !password) {
       return NextResponse.json(
-        { error: 'Email and password are required' },
+        { error: 'Email dan password harus diisi' },
         { status: 400 }
       );
     }
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { error: 'Invalid credentials' },
+        { error: 'Email tidak terdaftar. Silakan periksa kembali atau daftar akun baru.' },
         { status: 401 }
       );
     }
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     if (!isPasswordValid) {
       return NextResponse.json(
-        { error: 'Invalid credentials' },
+        { error: 'Password salah. Silakan coba lagi.' },
         { status: 401 }
       );
     }
