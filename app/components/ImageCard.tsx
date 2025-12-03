@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import {
@@ -66,6 +66,11 @@ export default function ImageCard({ image, onDelete, onRefresh }: ImageCardProps
   const [commentMenuAnchor, setCommentMenuAnchor] = useState<null | HTMLElement>(null);
   const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
+  // Swipe gesture states
+  const touchStartX = useRef<number>(0);
+  const touchEndX = useRef<number>(0);
+  const imageRef = useRef<HTMLDivElement>(null);
 
   const imageItems = image.images || [];
 
@@ -234,6 +239,44 @@ export default function ImageCard({ image, onDelete, onRefresh }: ImageCardProps
   const captionLines = image.caption ? image.caption.split('\n') : [];
   const hasMoreCaption = captionLines.length > 10;
   const displayCaption = isExpanded ? image.caption : getPreviewCaption();
+
+  // Swipe gesture handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    
+    const swipeDistance = touchStartX.current - touchEndX.current;
+    const minSwipeDistance = 50; // Minimum swipe distance in pixels
+
+    if (Math.abs(swipeDistance) > minSwipeDistance) {
+      if (swipeDistance > 0) {
+        // Swipe left - next image
+        handleNextImage();
+      } else {
+        // Swipe right - previous image
+        handlePrevImage();
+      }
+    }
+
+    // Reset
+    touchStartX.current = 0;
+    touchEndX.current = 0;
+  };
+
+  const handlePrevImage = () => {
+    setCurrentImageIndex((prev) => (prev === 0 ? imageItems.length - 1 : prev - 1));
+  };
+
+  const handleNextImage = () => {
+    setCurrentImageIndex((prev) => (prev === imageItems.length - 1 ? 0 : prev + 1));
+  };
 
   return (
     <Card sx={{ backgroundColor: '#1e1e1e', color: '#ffffff', mb: 2 }}>
@@ -417,16 +460,32 @@ export default function ImageCard({ image, onDelete, onRefresh }: ImageCardProps
 
         {/* Image Carousel */}
         {imageItems.length > 0 ? (
-          <Box sx={{ position: 'relative', mb: 2 }}>
+          <Box 
+            ref={imageRef}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            sx={{ 
+              position: 'relative', 
+              mb: 2,
+              width: '100%',
+              height: { xs: 300, sm: 400, md: 500 },
+              backgroundColor: '#000000',
+              borderRadius: 2,
+              overflow: 'hidden',
+              touchAction: 'pan-y pinch-zoom', // Allow vertical scroll but enable horizontal swipe
+            }}
+          >
             <CardMedia
               component="img"
               image={imageItems[currentImageIndex]?.imageUrl}
               alt={`${image.title}-${currentImageIndex}`}
               sx={{
-                borderRadius: 2,
-                maxHeight: 500,
+                width: '100%',
+                height: '100%',
                 objectFit: 'contain',
-                backgroundColor: '#000000',
+                userSelect: 'none',
+                WebkitUserDrag: 'none',
               }}
             />
             
@@ -434,46 +493,54 @@ export default function ImageCard({ image, onDelete, onRefresh }: ImageCardProps
             {imageItems.length > 1 && (
               <>
                 <IconButton
-                  onClick={() => setCurrentImageIndex((prev) => (prev === 0 ? imageItems.length - 1 : prev - 1))}
+                  onClick={handlePrevImage}
                   sx={{
                     position: 'absolute',
-                    left: 8,
+                    left: { xs: 4, sm: 8 },
                     top: '50%',
                     transform: 'translateY(-50%)',
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
                     color: '#ffffff',
-                    '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.7)' },
+                    width: { xs: 32, sm: 40 },
+                    height: { xs: 32, sm: 40 },
+                    '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
+                    zIndex: 2,
                   }}
                 >
-                  <ChevronLeftIcon />
+                  <ChevronLeftIcon fontSize="small" />
                 </IconButton>
                 <IconButton
-                  onClick={() => setCurrentImageIndex((prev) => (prev === imageItems.length - 1 ? 0 : prev + 1))}
+                  onClick={handleNextImage}
                   sx={{
                     position: 'absolute',
-                    right: 8,
+                    right: { xs: 4, sm: 8 },
                     top: '50%',
                     transform: 'translateY(-50%)',
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
                     color: '#ffffff',
-                    '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.7)' },
+                    width: { xs: 32, sm: 40 },
+                    height: { xs: 32, sm: 40 },
+                    '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
+                    zIndex: 2,
                   }}
                 >
-                  <ChevronRightIcon />
+                  <ChevronRightIcon fontSize="small" />
                 </IconButton>
                 
                 {/* Image Counter */}
                 <Box
                   sx={{
                     position: 'absolute',
-                    bottom: 8,
-                    right: 8,
+                    bottom: { xs: 4, sm: 8 },
+                    right: { xs: 4, sm: 8 },
                     backgroundColor: 'rgba(0, 0, 0, 0.7)',
                     color: '#ffffff',
-                    px: 1.5,
-                    py: 0.5,
+                    px: { xs: 1, sm: 1.5 },
+                    py: { xs: 0.25, sm: 0.5 },
                     borderRadius: 1,
-                    fontSize: '0.875rem',
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    fontWeight: 'bold',
+                    zIndex: 2,
                   }}
                 >
                   {currentImageIndex + 1} / {imageItems.length}
@@ -483,11 +550,16 @@ export default function ImageCard({ image, onDelete, onRefresh }: ImageCardProps
                 <Box
                   sx={{
                     position: 'absolute',
-                    bottom: 8,
+                    bottom: { xs: 4, sm: 8 },
                     left: '50%',
                     transform: 'translateX(-50%)',
                     display: 'flex',
-                    gap: 1,
+                    gap: { xs: 0.5, sm: 1 },
+                    zIndex: 2,
+                    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                    px: 1,
+                    py: 0.5,
+                    borderRadius: 2,
                   }}
                 >
                   {imageItems.map((_: any, idx: number) => (
@@ -495,12 +567,16 @@ export default function ImageCard({ image, onDelete, onRefresh }: ImageCardProps
                       key={idx}
                       onClick={() => setCurrentImageIndex(idx)}
                       sx={{
-                        width: 8,
-                        height: 8,
+                        width: { xs: 6, sm: 8 },
+                        height: { xs: 6, sm: 8 },
                         borderRadius: '50%',
                         backgroundColor: idx === currentImageIndex ? '#ffffff' : 'rgba(255, 255, 255, 0.5)',
                         cursor: 'pointer',
-                        transition: 'background-color 0.3s',
+                        transition: 'all 0.3s',
+                        '&:hover': {
+                          backgroundColor: '#ffffff',
+                          transform: 'scale(1.2)',
+                        },
                       }}
                     />
                   ))}
@@ -509,9 +585,19 @@ export default function ImageCard({ image, onDelete, onRefresh }: ImageCardProps
             )}
           </Box>
         ) : (
-          <Typography variant="body2" sx={{ color: '#808080', textAlign: 'center', py: 4 }}>
-            Tidak ada gambar
-          </Typography>
+          <Box sx={{ 
+            height: { xs: 300, sm: 400, md: 500 },
+            backgroundColor: '#000000',
+            borderRadius: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            mb: 2,
+          }}>
+            <Typography variant="body2" sx={{ color: '#808080', textAlign: 'center' }}>
+              Tidak ada gambar
+            </Typography>
+          </Box>
         )}
 
         <Divider sx={{ borderColor: '#333333', my: 2 }} />

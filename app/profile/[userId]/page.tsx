@@ -1012,7 +1012,14 @@ export default function ProfilePage() {
   }
 
   return (
-    <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
+    <Container 
+      maxWidth="md" 
+      sx={{ 
+        mt: { xs: 2, sm: 3, md: 4 }, 
+        mb: { xs: 2, sm: 3, md: 4 },
+        px: { xs: 1.5, sm: 2, md: 3 },
+      }}
+    >
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
           {error}
@@ -1020,34 +1027,78 @@ export default function ProfilePage() {
       )}
 
       {/* Profile Header Section */}
-      <Paper sx={{ p: 4, bgcolor: '#1e1e1e', mb: 3 }}>
-        {/* Avatar Section */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4 }}>
-          <Box sx={{ position: 'relative' }}>
-            <Avatar
-              src={user.avatar ? user.avatar : undefined}
-              sx={{
-                width: 120,
-                height: 120,
-                fontSize: 48,
-                bgcolor: '#404040',
-                mb: 2,
-              }}
-            >
-              {!user.avatar && user.fullName.charAt(0).toUpperCase()}
-            </Avatar>
-            
+      <Paper sx={{ 
+        p: { xs: 1.5, sm: 3, md: 4 }, 
+        bgcolor: '#1e1e1e', 
+        mb: 3,
+        overflow: 'hidden',
+        width: '100%',
+        boxSizing: 'border-box',
+      }}>
+        {/* Profile Layout: Avatar Left, Info Table Right */}
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'row', sm: 'row' },
+          gap: { xs: 1.5, sm: 3, md: 4 },
+          mb: { xs: 2, sm: 3 },
+          alignItems: 'flex-start',
+          width: '100%',
+        }}>
+          {/* Left: Avatar */}
+          <Box sx={{ 
+            flexShrink: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: { xs: 0.5, sm: 1 },
+          }}>
+            <Box sx={{ position: 'relative' }}>
+              <Avatar
+                src={user.avatar ? user.avatar : undefined}
+                sx={{
+                  width: { xs: 70, sm: 100, md: 120 },
+                  height: { xs: 70, sm: 100, md: 120 },
+                  fontSize: { xs: 28, sm: 40, md: 48 },
+                  bgcolor: '#404040',
+                  border: { xs: '2px solid #333333', sm: '3px solid #333333' },
+                }}
+              >
+                {!user.avatar && user.fullName.charAt(0).toUpperCase()}
+              </Avatar>
+              
+              {uploadingAvatar && (
+                <CircularProgress
+                  size={24}
+                  sx={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    marginTop: '-12px',
+                    marginLeft: '-12px',
+                  }}
+                />
+              )}
+            </Box>
+
             {isOwnProfile && (
-              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+              <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
                 <IconButton
                   component="label"
                   disabled={uploadingAvatar}
+                  size="small"
                   sx={{
                     bgcolor: '#404040',
+                    color: '#ffffff',
+                    width: { xs: 28, sm: 36 },
+                    height: { xs: 28, sm: 36 },
+                    p: 0,
                     '&:hover': { bgcolor: '#505050' },
+                    '& .MuiSvgIcon-root': {
+                      fontSize: { xs: '1rem', sm: '1.25rem' },
+                    },
                   }}
                 >
-                  <PhotoCamera />
+                  <PhotoCamera fontSize="small" />
                   <input
                     type="file"
                     hidden
@@ -1060,56 +1111,111 @@ export default function ProfilePage() {
                   <IconButton
                     onClick={handleDeleteAvatar}
                     disabled={uploadingAvatar}
+                    size="small"
                     sx={{
                       bgcolor: '#404040',
+                      color: '#ffffff',
+                      width: { xs: 28, sm: 36 },
+                      height: { xs: 28, sm: 36 },
+                      p: 0,
                       '&:hover': { bgcolor: '#505050' },
+                      '& .MuiSvgIcon-root': {
+                        fontSize: { xs: '1rem', sm: '1.25rem' },
+                      },
                     }}
                   >
-                    <Delete />
+                    <Delete fontSize="small" />
                   </IconButton>
                 )}
               </Box>
             )}
-
-            {uploadingAvatar && (
-              <CircularProgress
-                size={24}
-                sx={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  marginTop: '-12px',
-                  marginLeft: '-12px',
-                }}
-              />
-            )}
           </Box>
 
-          <Typography variant="h5" sx={{ color: '#fff', fontWeight: 'bold' }}>
-            {user.fullName}
-          </Typography>
-          <Typography variant="body2" sx={{ color: '#b0b0b0' }}>
-            @{user.username}
-          </Typography>
-        </Box>
-
-        {/* Edit Profile Section */}
-        {isOwnProfile && (
-          <Box sx={{ mb: 4 }}>
+          {/* Right: User Info Table */}
+          <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
             {!isEditing ? (
-              <Button
-                variant="outlined"
-                startIcon={<Edit />}
-                onClick={() => setIsEditing(true)}
-                fullWidth
+              <Box
+                component="table"
                 sx={{
-                  borderColor: '#404040',
-                  color: '#fff',
-                  '&:hover': { borderColor: '#505050', bgcolor: '#1a1a1a' },
+                  width: '100%',
+                  borderCollapse: 'separate',
+                  borderSpacing: 0,
+                  tableLayout: 'fixed',
+                  '& td': {
+                    padding: { xs: '6px 2px', sm: '10px 8px' },
+                    borderBottom: '1px solid #333333',
+                    fontSize: { xs: '0.7rem', sm: '0.875rem', md: '1rem' },
+                    wordBreak: 'break-word',
+                    overflow: 'hidden',
+                  },
+                  '& tr:last-child td': {
+                    borderBottom: 'none',
+                  },
                 }}
               >
-                Edit Profil
-              </Button>
+                <tbody>
+                  <tr>
+                    <td style={{ color: '#b0b0b0', width: '35%', fontWeight: 500 }}>Nama</td>
+                    <td style={{ color: '#ffffff', fontWeight: 'bold', width: '65%' }}>
+                      <Box sx={{ 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                      }}>
+                        {user.fullName}
+                      </Box>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ color: '#b0b0b0', fontWeight: 500 }}>Username</td>
+                    <td style={{ color: '#ffffff' }}>
+                      <Box sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        @{user.username}
+                      </Box>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ color: '#b0b0b0', fontWeight: 500 }}>Email</td>
+                    <td style={{ color: '#ffffff' }}>
+                      <Box sx={{ 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {user.email}
+                      </Box>
+                    </td>
+                  </tr>
+                  {user.bio && (
+                    <tr>
+                      <td style={{ color: '#b0b0b0', fontWeight: 500, verticalAlign: 'top' }}>Bio</td>
+                      <td style={{ 
+                        color: '#ffffff', 
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                      }}>
+                        {user.bio}
+                      </td>
+                    </tr>
+                  )}
+                  <tr>
+                    <td style={{ color: '#b0b0b0', fontWeight: 500 }}>Konten</td>
+                    <td style={{ color: '#ffffff' }}>{allContent.length} item</td>
+                  </tr>
+                  <tr>
+                    <td style={{ color: '#b0b0b0', fontWeight: 500, verticalAlign: 'top' }}>Bergabung</td>
+                    <td style={{ color: '#ffffff', wordBreak: 'break-word' }}>
+                      {new Date(user.createdAt).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
+                    </td>
+                  </tr>
+                </tbody>
+              </Box>
             ) : (
               <Box>
                 <TextField
@@ -1117,8 +1223,16 @@ export default function ProfilePage() {
                   label="Nama Lengkap"
                   value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                  sx={{ mb: 2 }}
-                  InputLabelProps={{ style: { color: '#b0b0b0' } }}
+                  size="small"
+                  sx={{ 
+                    mb: 2,
+                    '& .MuiInputBase-input': {
+                      fontSize: { xs: '0.875rem', sm: '1rem' },
+                    },
+                  }}
+                  InputLabelProps={{ 
+                    style: { color: '#b0b0b0', fontSize: '0.875rem' } 
+                  }}
                   InputProps={{
                     style: { color: '#fff', backgroundColor: '#2a2a2a' },
                   }}
@@ -1130,78 +1244,139 @@ export default function ProfilePage() {
                   rows={3}
                   value={formData.bio}
                   onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                  sx={{ mb: 2 }}
-                  InputLabelProps={{ style: { color: '#b0b0b0' } }}
+                  size="small"
+                  sx={{ 
+                    mb: 2,
+                    '& .MuiInputBase-input': {
+                      fontSize: { xs: '0.875rem', sm: '1rem' },
+                    },
+                  }}
+                  InputLabelProps={{ 
+                    style: { color: '#b0b0b0', fontSize: '0.875rem' } 
+                  }}
                   InputProps={{
                     style: { color: '#fff', backgroundColor: '#2a2a2a' },
                   }}
                 />
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                  <Button
-                    variant="contained"
-                    onClick={handleUpdateProfile}
-                    sx={{
-                      flex: 1,
-                      bgcolor: '#fff',
-                      color: '#000',
-                      '&:hover': { bgcolor: '#e0e0e0' },
-                    }}
-                  >
-                    Simpan
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    onClick={() => {
-                      setIsEditing(false);
-                      setFormData({
-                        fullName: user.fullName,
-                        bio: user.bio || '',
-                      });
-                    }}
-                    sx={{
-                      flex: 1,
-                      borderColor: '#404040',
-                      color: '#fff',
-                      '&:hover': { borderColor: '#505050', bgcolor: '#1a1a1a' },
-                    }}
-                  >
-                    Batal
-                  </Button>
-                </Box>
               </Box>
             )}
           </Box>
-        )}
+        </Box>
 
-        {/* Bio */}
-        {!isEditing && user.bio && (
-          <Box sx={{ mb: 0 }}>
-            <Typography variant="body1" sx={{ color: '#fff', whiteSpace: 'pre-wrap' }}>
-              {user.bio}
-            </Typography>
+        {/* Edit Profile Button/Actions */}
+        {isOwnProfile && (
+          <Box sx={{ mt: { xs: 1.5, sm: 2 }, width: '100%' }}>
+            {!isEditing ? (
+              <Button
+                variant="outlined"
+                startIcon={<Edit fontSize="small" />}
+                onClick={() => setIsEditing(true)}
+                fullWidth
+                sx={{
+                  borderColor: '#404040',
+                  color: '#fff',
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  py: { xs: 0.75, sm: 1 },
+                  '&:hover': { borderColor: '#505050', bgcolor: '#1a1a1a' },
+                  '& .MuiButton-startIcon': {
+                    mr: { xs: 0.5, sm: 1 },
+                  },
+                }}
+              >
+                Edit Profil
+              </Button>
+            ) : (
+              <Box sx={{ display: 'flex', gap: { xs: 1, sm: 2 } }}>
+                <Button
+                  variant="contained"
+                  onClick={handleUpdateProfile}
+                  sx={{
+                    flex: 1,
+                    bgcolor: '#fff',
+                    color: '#000',
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    py: { xs: 0.75, sm: 1 },
+                    '&:hover': { bgcolor: '#e0e0e0' },
+                  }}
+                >
+                  Simpan
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setFormData({
+                      fullName: user.fullName,
+                      bio: user.bio || '',
+                    });
+                  }}
+                  sx={{
+                    flex: 1,
+                    borderColor: '#404040',
+                    color: '#fff',
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    py: { xs: 0.75, sm: 1 },
+                    '&:hover': { borderColor: '#505050', bgcolor: '#1a1a1a' },
+                  }}
+                >
+                  Batal
+                </Button>
+              </Box>
+            )}
           </Box>
         )}
       </Paper>
 
       {/* Artworks Grid Section */}
-      <Paper sx={{ p: 4, bgcolor: '#1e1e1e' }}>
+      <Paper sx={{ 
+        p: { xs: 1.5, sm: 3, md: 4 }, 
+        bgcolor: '#1e1e1e',
+        width: '100%',
+        boxSizing: 'border-box',
+        overflow: 'hidden',
+      }}>
         {/* Content Section Header */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{ color: '#fff' }}>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          mb: 2,
+          flexWrap: { xs: 'wrap', sm: 'nowrap' },
+          gap: { xs: 1, sm: 0 },
+        }}>
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              color: '#fff',
+              fontSize: { xs: '1rem', sm: '1.25rem' },
+            }}
+          >
             Konten ({allContent.length})
           </Typography>
           {isOwnProfile && (
             <Button
               variant="contained"
-              startIcon={<Add />}
+              startIcon={<Add fontSize="small" />}
               onClick={() => setShowCreatePost(!showCreatePost)}
               sx={{
                 bgcolor: '#fff',
                 color: '#000',
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                py: { xs: 0.5, sm: 0.75 },
+                px: { xs: 1.5, sm: 2 },
+                minWidth: { xs: 'auto', sm: 'auto' },
                 '&:hover': { bgcolor: '#e0e0e0' },
+                '& .MuiButton-startIcon': {
+                  mr: { xs: 0.5, sm: 1 },
+                },
               }}
             >
-              {showCreatePost ? 'Tutup' : 'Buat Konten'}
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                {showCreatePost ? 'Tutup' : 'Buat Konten'}
+              </Box>
+              <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                {showCreatePost ? 'Tutup' : 'Buat'}
+              </Box>
             </Button>
           )}
         </Box>
