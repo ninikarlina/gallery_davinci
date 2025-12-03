@@ -182,7 +182,13 @@ export default function FeedPage() {
 
   return (
     <Box sx={{ backgroundColor: '#121212', minHeight: '100vh' }}>
-      <Container maxWidth="md" sx={{ py: 4 }}>
+      <Container 
+        maxWidth="md" 
+        sx={{ 
+          py: { xs: 2, sm: 4 },
+          px: { xs: 1.5, sm: 3 },
+        }}
+      >
         
         <UnifiedUploadForm onUploadSuccess={handlePostCreated} />
 

@@ -193,55 +193,93 @@ export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadForm
   };
 
   return (
-    <Paper sx={{ p: 3, backgroundColor: '#1e1e1e', borderRadius: 2 }}>
+    <Paper sx={{ 
+      p: { xs: 2, sm: 3 }, 
+      backgroundColor: '#1e1e1e', 
+      borderRadius: 2,
+      width: '100%',
+      boxSizing: 'border-box',
+      overflow: 'hidden',
+    }}>
       <ToggleButtonGroup
         value={contentType}
         exclusive
         onChange={handleContentTypeChange}
         fullWidth
-        sx={{ mb: 3 }}
+        sx={{ 
+          mb: 3,
+          flexWrap: { xs: 'wrap', sm: 'nowrap' },
+        }}
       >
         <ToggleButton
           value="post"
           sx={{
             color: '#b0b0b0',
             borderColor: '#404040',
+            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+            px: { xs: 1, sm: 2 },
+            py: { xs: 0.75, sm: 1 },
+            flex: { xs: '1 1 100%', sm: '1 1 auto' },
             '&.Mui-selected': {
               backgroundColor: '#333333',
               color: '#ffffff',
               '&:hover': { backgroundColor: '#404040' },
             },
+            '& .MuiSvgIcon-root': {
+              fontSize: { xs: '1rem', sm: '1.25rem' },
+              mr: { xs: 0.5, sm: 1 },
+            },
           }}
         >
-          <ArticleIcon sx={{ mr: 1 }} /> Puisi/Karya
+          <ArticleIcon /> 
+          <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Puisi/Karya</Box>
+          <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>Puisi</Box>
         </ToggleButton>
         <ToggleButton
           value="book"
           sx={{
             color: '#b0b0b0',
             borderColor: '#404040',
+            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+            px: { xs: 1, sm: 2 },
+            py: { xs: 0.75, sm: 1 },
+            flex: { xs: '1 1 50%', sm: '1 1 auto' },
             '&.Mui-selected': {
               backgroundColor: '#333333',
               color: '#ffffff',
               '&:hover': { backgroundColor: '#404040' },
             },
+            '& .MuiSvgIcon-root': {
+              fontSize: { xs: '1rem', sm: '1.25rem' },
+              mr: { xs: 0.5, sm: 1 },
+            },
           }}
         >
-          <BookIcon sx={{ mr: 1 }} /> Buku PDF
+          <BookIcon /> 
+          <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Buku PDF</Box>
+          <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>Buku</Box>
         </ToggleButton>
         <ToggleButton
           value="image"
           sx={{
             color: '#b0b0b0',
             borderColor: '#404040',
+            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+            px: { xs: 1, sm: 2 },
+            py: { xs: 0.75, sm: 1 },
+            flex: { xs: '1 1 50%', sm: '1 1 auto' },
             '&.Mui-selected': {
               backgroundColor: '#333333',
               color: '#ffffff',
               '&:hover': { backgroundColor: '#404040' },
             },
+            '& .MuiSvgIcon-root': {
+              fontSize: { xs: '1rem', sm: '1.25rem' },
+              mr: { xs: 0.5, sm: 1 },
+            },
           }}
         >
-          <ImageIcon sx={{ mr: 1 }} /> Gambar
+          <ImageIcon /> Gambar
         </ToggleButton>
       </ToggleButtonGroup>
 
@@ -294,16 +332,39 @@ export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadForm
               variant="outlined"
               component="label"
               startIcon={<UploadIcon />}
+              fullWidth
               sx={{
                 borderColor: '#404040',
                 color: '#ffffff',
+                fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                px: { xs: 1.5, sm: 2 },
+                py: { xs: 0.75, sm: 1 },
+                textAlign: 'left',
+                justifyContent: 'flex-start',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
                 '&:hover': { borderColor: '#ffffff', backgroundColor: '#333333' },
+                '& .MuiButton-startIcon': {
+                  mr: { xs: 0.5, sm: 1 },
+                },
               }}
             >
-              {contentType === 'book'
-                ? (file ? file.name : 'Pilih PDF')
-                : (files.length > 0 ? `${files.length} foto dipilih` : 'Pilih Gambar')
-              }
+              <Box 
+                component="span" 
+                sx={{ 
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  display: 'block',
+                  width: '100%',
+                }}
+              >
+                {contentType === 'book'
+                  ? (file ? file.name : 'Pilih PDF')
+                  : (files.length > 0 ? `${files.length} foto dipilih` : 'Pilih Gambar')
+                }
+              </Box>
               <input
                 type="file"
                 hidden
@@ -321,13 +382,16 @@ export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadForm
             {/* Preview untuk multiple images */}
             {contentType === 'image' && previews.length > 0 && (
               <Box sx={{ mt: 2 }}>
-                <Typography variant="body2" sx={{ color: '#b0b0b0', mb: 1 }}>
+                <Typography variant="body2" sx={{ color: '#b0b0b0', mb: 1, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                   Preview ({previews.length} foto)
                 </Typography>
                 <Box sx={{ 
                   display: 'grid', 
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', 
-                  gap: 1 
+                  gridTemplateColumns: { 
+                    xs: 'repeat(auto-fill, minmax(70px, 1fr))',
+                    sm: 'repeat(auto-fill, minmax(100px, 1fr))' 
+                  }, 
+                  gap: { xs: 0.5, sm: 1 },
                 }}>
                   {previews.map((preview, index) => (
                     <Box
@@ -361,10 +425,11 @@ export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadForm
                           top: 4,
                           right: 4,
                           minWidth: 'auto',
-                          width: 24,
-                          height: 24,
+                          width: { xs: 20, sm: 24 },
+                          height: { xs: 20, sm: 24 },
                           padding: 0,
                           borderRadius: '50%',
+                          fontSize: { xs: '1rem', sm: '1.25rem' },
                           backgroundColor: 'rgba(220, 38, 38, 0.9)',
                           color: 'white',
                           opacity: 0,
@@ -377,11 +442,11 @@ export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadForm
                       <Box
                         sx={{
                           position: 'absolute',
-                          bottom: 4,
-                          left: 4,
+                          bottom: { xs: 2, sm: 4 },
+                          left: { xs: 2, sm: 4 },
                           backgroundColor: 'rgba(0, 0, 0, 0.7)',
                           color: 'white',
-                          fontSize: '0.7rem',
+                          fontSize: { xs: '0.6rem', sm: '0.7rem' },
                           px: 0.5,
                           py: 0.25,
                           borderRadius: 0.5,
@@ -420,8 +485,8 @@ export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadForm
                           color: '#b0b0b0',
                         }}
                       >
-                        <Typography variant="h5">+</Typography>
-                        <Typography variant="caption">Tambah</Typography>
+                        <Typography variant="h5" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>+</Typography>
+                        <Typography variant="caption" sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}>Tambah</Typography>
                       </Box>
                       <input
                         type="file"
@@ -433,7 +498,7 @@ export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadForm
                     </Box>
                   )}
                 </Box>
-                <Typography variant="caption" sx={{ color: '#808080', mt: 1, display: 'block' }}>
+                <Typography variant="caption" sx={{ color: '#808080', mt: 1, display: 'block', fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
                   Total: {previews.length}/15 foto
                 </Typography>
               </Box>
