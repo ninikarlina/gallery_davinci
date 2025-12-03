@@ -142,7 +142,6 @@ export default function FeedPage() {
         <PostCard
           key={item.id}
           post={item}
-          onRefresh={handleRefresh}
           onDelete={handleRefresh}
         />
       );
@@ -154,7 +153,6 @@ export default function FeedPage() {
         <BookCard
           key={item.id}
           book={item}
-          onRefresh={handleRefresh}
           onDelete={handleRefresh}
         />
       );
@@ -166,7 +164,6 @@ export default function FeedPage() {
         <ImageCard
           key={item.id}
           image={item}
-          onRefresh={handleRefresh}
           onDelete={handleRefresh}
         />
       );

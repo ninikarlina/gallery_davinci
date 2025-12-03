@@ -54,7 +54,7 @@ export default function Navbar() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     handleMenuClose();
-    router.push('/login');
+    router.push('/feed');
     // Refresh page to clear all cached data
     window.location.reload();
   };
