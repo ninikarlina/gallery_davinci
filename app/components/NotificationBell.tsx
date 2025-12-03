@@ -12,6 +12,7 @@ import {
   Button,
 } from '@mui/material';
 import NotificationsIcon from '@mui/icons-material/Notifications';
+import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 
@@ -109,6 +110,22 @@ export default function NotificationBell() {
     }
   };
 
+  const handleDeleteNotification = async (notificationId: string, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent navigation when clicking delete
+    
+    try {
+      await axios.delete(`/api/notifications/${notificationId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      // Update local state instead of refetching
+      setNotifications(notifications.filter(n => n.id !== notificationId));
+      const unread = notifications.filter(n => n.id !== notificationId && !n.isRead).length;
+      setUnreadCount(unread);
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    }
+  };
+
   const getTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -137,7 +154,8 @@ export default function NotificationBell() {
         onClose={handleClose}
         PaperProps={{
           sx: {
-            width: 360,
+            width: { xs: 340, sm: 400 },
+            maxWidth: '90vw',
             maxHeight: 480,
             bgcolor: '#1e1e1e',
             color: 'white',
@@ -178,16 +196,55 @@ export default function NotificationBell() {
                     : 'rgba(144, 202, 249, 0.15)',
                 },
                 borderLeft: notification.isRead ? 'none' : '3px solid #90caf9',
+                display: 'flex',
+                gap: 1,
+                alignItems: 'flex-start',
+                minHeight: 'auto',
               }}
             >
-              <Box sx={{ width: '100%' }}>
-                <Typography variant="body2" sx={{ mb: 0.5 }}>
+              <Box sx={{ 
+                flex: 1, 
+                minWidth: 0,
+                overflow: 'hidden',
+              }}>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    mb: 0.5,
+                    wordBreak: 'break-word',
+                    whiteSpace: 'normal',
+                    lineHeight: 1.4,
+                    fontSize: { xs: '0.875rem', sm: '0.875rem' },
+                  }}
+                >
                   {notification.content}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography 
+                  variant="caption" 
+                  color="text.secondary"
+                  sx={{
+                    fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                  }}
+                >
                   {getTimeAgo(notification.createdAt)}
                 </Typography>
               </Box>
+              <IconButton
+                size="small"
+                onClick={(e) => handleDeleteNotification(notification.id, e)}
+                sx={{
+                  color: '#808080',
+                  padding: '6px',
+                  flexShrink: 0,
+                  mt: '-2px',
+                  '&:hover': {
+                    color: '#ff5555',
+                    bgcolor: 'rgba(255, 85, 85, 0.1)',
+                  },
+                }}
+              >
+                <DeleteIcon sx={{ fontSize: '1.1rem' }} />
+              </IconButton>
             </MenuItem>
           ))
         )}
