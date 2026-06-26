@@ -1,216 +1,9 @@
-'use client';
+const fs = require('fs');
 
-import { useState } from 'react';
-import axios from 'axios';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FileText, 
-  Book, 
-  Image as ImageIcon, 
-  UploadCloud, 
-  X, 
-  Plus, 
-  CheckCircle2, 
-  AlertCircle, 
-  Loader2 
-} from 'lucide-react';
+const filePath = '/home/randukumbolo/Workspace/vscode/project/gallery_davinci/gallery_davinci/app/components/UnifiedUploadForm.tsx';
+let content = fs.readFileSync(filePath, 'utf8');
 
-interface UnifiedUploadFormProps {
-  onUploadSuccess: () => void;
-}
-
-export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadFormProps) {
-  const [contentType, setContentType] = useState<'post' | 'book' | 'image'>('post');
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [file, setFile] = useState<File | null>(null);
-  const [files, setFiles] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  const handleContentTypeChange = (newType: 'post' | 'book' | 'image') => {
-    setContentType(newType);
-    setTitle('');
-    setContent('');
-    setFile(null);
-    setFiles([]);
-    setPreviews([]);
-    setError('');
-    setSuccess('');
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      if (contentType === 'book') {
-        const selectedFile = e.target.files[0];
-        if (selectedFile.type !== 'application/pdf') {
-          setError('Hanya file PDF yang diperbolehkan untuk buku');
-          return;
-        }
-        setFile(selectedFile);
-        setError('');
-      } else if (contentType === 'image') {
-        const selectedFiles = Array.from(e.target.files);
-        const MAX_FILES = 15;
-        
-        const combinedFiles = [...files, ...selectedFiles];
-        
-        if (combinedFiles.length > MAX_FILES) {
-          setError(`Maksimal ${MAX_FILES} foto. Anda sudah punya ${files.length} foto, hanya bisa tambah ${MAX_FILES - files.length} lagi.`);
-          return;
-        }
-        
-        for (const file of selectedFiles) {
-          if (!file.type.startsWith('image/')) {
-            setError('Hanya file gambar yang diperbolehkan');
-            return;
-          }
-          if (file.size > 5 * 1024 * 1024) {
-            setError(`File ${file.name} terlalu besar. Maksimal 5MB per file`);
-            return;
-          }
-        }
-        
-        const newPreviews: string[] = [];
-        let loadedCount = 0;
-        
-        selectedFiles.forEach((file, index) => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            newPreviews[index] = reader.result as string;
-            loadedCount++;
-            
-            if (loadedCount === selectedFiles.length) {
-              setPreviews(prev => [...prev, ...newPreviews]);
-            }
-          };
-          reader.readAsDataURL(file);
-        });
-        
-        setFiles(combinedFiles);
-        setError('');
-      }
-    }
-  };
-
-  const removeFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
-    setPreviews(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setError('Anda harus login terlebih dahulu');
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      if (contentType === 'post') {
-        await axios.post(
-          '/api/posts',
-          { title, content },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setSuccess('Puisi berhasil dibagikan!');
-      } else if (contentType === 'book') {
-        if (!file) {
-          setError('Pilih file PDF terlebih dahulu');
-          setLoading(false);
-          return;
-        }
-
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('title', title);
-        formData.append('description', content);
-
-        await axios.post('/api/books', formData, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data',
-          },
-        });
-        setSuccess('Buku berhasil diupload!');
-      } else if (contentType === 'image') {
-        if (files.length === 0) {
-          setError('Pilih minimal 1 foto terlebih dahulu');
-          setLoading(false);
-          return;
-        }
-
-        const formData = new FormData();
-        files.forEach((file) => {
-          formData.append('files', file);
-        });
-        formData.append('title', title);
-        formData.append('description', content);
-
-        await axios.post('/api/upload/images', formData, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data',
-          },
-        });
-        setSuccess('Gambar berhasil diupload!');
-      }
-
-      setTitle('');
-      setContent('');
-      setFile(null);
-      setFiles([]);
-      setPreviews([]);
-      onUploadSuccess();
-      
-      // Auto clear success message after 3 seconds
-      setIsExpanded(false);
-      setTimeout(() => setSuccess(''), 3000);
-      
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Terjadi kesalahan');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getTypeStyles = () => {
-    switch (contentType) {
-      case 'book': return {
-        activeTab: 'bg-amber-500/20 border-amber-500/50 text-amber-400',
-        activeIcon: 'text-amber-400',
-        ring: 'focus:ring-amber-500/30',
-        btn: 'bg-gradient-to-b from-amber-500/80 to-amber-600/80 hover:from-amber-400 hover:to-amber-500 border-amber-400/50 text-white shadow-lg',
-        borderFocus: 'focus:border-amber-500/50',
-      };
-      case 'image': return {
-        activeTab: 'bg-purple-500/20 border-purple-500/50 text-purple-400',
-        activeIcon: 'text-purple-400',
-        ring: 'focus:ring-purple-500/30',
-        btn: 'bg-gradient-to-b from-purple-500/80 to-purple-600/80 hover:from-purple-400 hover:to-purple-500 border-purple-400/50 text-white shadow-lg',
-        borderFocus: 'focus:border-purple-500/50',
-      };
-      default: return {
-        activeTab: 'bg-white/10 border-white/20 text-white',
-        activeIcon: 'text-white',
-        ring: 'focus:ring-white/20',
-        btn: 'bg-white/10 hover:bg-white/20 border-white/20 text-white hover:text-white shadow-lg',
-        borderFocus: 'focus:border-white/30',
-      };
-    }
-  };
-
-  const styles = getTypeStyles();
-
-    return (
+const newReturnBlock = `    return (
     <>
       {/* Floating Action Button (FAB) */}
       <AnimatePresence>
@@ -252,7 +45,7 @@ export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadForm
                 <X className="w-5 h-5" />
               </button>
 
-              <div className={`absolute -top-32 -left-32 w-64 h-64 rounded-full blur-[100px] opacity-20 pointer-events-none transition-colors duration-500 ${contentType === 'book' ? 'bg-amber-500' : contentType === 'image' ? 'bg-purple-500' : 'bg-white'}`} />
+              <div className={\`absolute -top-32 -left-32 w-64 h-64 rounded-full blur-[100px] opacity-20 pointer-events-none transition-colors duration-500 \${contentType === 'book' ? 'bg-amber-500' : contentType === 'image' ? 'bg-purple-500' : 'bg-white'}\`} />
               
               {/* Tabs */}
               <div className="flex p-2 gap-2 bg-black/40 border-b border-white/5 relative z-10 pt-16 sm:pt-4 sm:pr-16 shrink-0">
@@ -264,13 +57,13 @@ export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadForm
           <button
             key={tab.id}
             onClick={() => handleContentTypeChange(tab.id as any)}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-2xl text-sm font-bold tracking-widest uppercase transition-all duration-300 ${
+            className={\`flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-2xl text-sm font-bold tracking-widest uppercase transition-all duration-300 \${
               contentType === tab.id 
                 ? styles.activeTab
                 : 'text-white/40 hover:text-white/80 hover:bg-white/5 border border-transparent'
-            }`}
+            }\`}
           >
-            <tab.icon className={`w-4 h-4 ${contentType === tab.id ? styles.activeIcon : 'text-white/30'}`} />
+            <tab.icon className={\`w-4 h-4 \${contentType === tab.id ? styles.activeIcon : 'text-white/30'}\`} />
             <span className="hidden sm:inline">{tab.label}</span>
             <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
           </button>
@@ -313,7 +106,7 @@ export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadForm
               onChange={(e) => setTitle(e.target.value)}
               required
               placeholder="Masukkan judul di sini..."
-              className={`w-full bg-black/40 border border-black/50 border-t-black/80 border-b-white/10 rounded-2xl px-5 py-4 text-sm font-medium text-white placeholder-white/20 focus:outline-none focus:ring-1 shadow-inner transition-all ${styles.borderFocus} ${styles.ring}`}
+              className={\`w-full bg-black/40 border border-black/50 border-t-black/80 border-b-white/10 rounded-2xl px-5 py-4 text-sm font-medium text-white placeholder-white/20 focus:outline-none focus:ring-1 shadow-inner transition-all \${styles.borderFocus} \${styles.ring}\`}
             />
           </div>
 
@@ -328,7 +121,7 @@ export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadForm
               required={contentType === 'post'}
               rows={contentType === 'post' ? 8 : 4}
               placeholder={contentType === 'post' ? "Tuliskan keindahan sastra Anda..." : "Tambahkan deskripsi singkat..."}
-              className={`w-full bg-black/40 border border-black/50 border-t-black/80 border-b-white/10 rounded-2xl px-5 py-4 text-sm font-medium text-white placeholder-white/20 focus:outline-none focus:ring-1 shadow-inner transition-all custom-scrollbar resize-none ${styles.borderFocus} ${styles.ring}`}
+              className={\`w-full bg-black/40 border border-black/50 border-t-black/80 border-b-white/10 rounded-2xl px-5 py-4 text-sm font-medium text-white placeholder-white/20 focus:outline-none focus:ring-1 shadow-inner transition-all custom-scrollbar resize-none \${styles.borderFocus} \${styles.ring}\`}
             />
           </div>
 
@@ -350,15 +143,15 @@ export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadForm
                 />
                 <label
                   htmlFor="file-upload"
-                  className={`flex flex-col items-center justify-center w-full min-h-[120px] rounded-2xl border-2 border-dashed cursor-pointer transition-all duration-300 bg-black/40 hover:bg-white/5 
-                  ${contentType === 'book' ? 'border-amber-500/20 hover:border-amber-500/50' : 'border-purple-500/20 hover:border-purple-500/50'}`}
+                  className={\`flex flex-col items-center justify-center w-full min-h-[120px] rounded-2xl border-2 border-dashed cursor-pointer transition-all duration-300 bg-black/40 hover:bg-white/5 
+                  \${contentType === 'book' ? 'border-amber-500/20 hover:border-amber-500/50' : 'border-purple-500/20 hover:border-purple-500/50'}\`}
                 >
                   <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
-                    <UploadCloud className={`w-8 h-8 mb-3 opacity-50 group-hover:opacity-100 transition-opacity ${contentType === 'book' ? 'text-amber-400' : 'text-purple-400'}`} />
+                    <UploadCloud className={\`w-8 h-8 mb-3 opacity-50 group-hover:opacity-100 transition-opacity \${contentType === 'book' ? 'text-amber-400' : 'text-purple-400'}\`} />
                     <p className="text-sm font-bold text-white/70 mb-1">
                       {contentType === 'book' 
                         ? (file ? file.name : 'Klik untuk memilih file PDF')
-                        : (files.length > 0 ? `${files.length} gambar dipilih` : 'Klik untuk memilih Gambar')}
+                        : (files.length > 0 ? \`\${files.length} gambar dipilih\` : 'Klik untuk memilih Gambar')}
                     </p>
                     <p className="text-sm text-white/30 font-medium tracking-wide">
                       {contentType === 'book' ? 'Maksimal ukuran file 10MB' : 'Bisa pilih banyak gambar sekaligus (Maks 15)'}
@@ -395,7 +188,7 @@ export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadForm
                         >
                           <img
                             src={preview}
-                            alt={`Preview ${index}`}
+                            alt={\`Preview \${index}\`}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover/preview:scale-110"
                           />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center">
@@ -434,7 +227,7 @@ export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadForm
             <button
               type="submit"
               disabled={loading}
-              className={`w-full relative flex items-center justify-center gap-2 py-4 px-6 rounded-xl text-sm font-bold tracking-wider uppercase transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 border ${styles.btn}`}
+              className={\`w-full relative flex items-center justify-center gap-2 py-4 px-6 rounded-xl text-sm font-bold tracking-wider uppercase transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 border \${styles.btn}\`}
             >
               {loading ? (
                 <>
@@ -461,3 +254,8 @@ export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadForm
     </>
   );
 }
+`;
+
+content = content.replace(/    return \([\s\S]*\}\s*$/g, newReturnBlock);
+fs.writeFileSync(filePath, content);
+console.log('Modified strictly to Floating Modal with Plus button.');

@@ -181,7 +181,7 @@ export default function Navbar() {
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center gap-3 text-sm font-bold tracking-wider text-white/70 hover:text-white uppercase p-3 rounded-xl hover:bg-white/5 transition-colors"
                 >
-                  <div className="w-6 h-6 rounded-full bg-black border border-white/20 shadow-inner overflow-hidden flex items-center justify-center">
+                  <div className="w-6 h-6 rounded-full bg-black border border-white/20 shadow-inner overflow-hidden flex items-center justify-center relative">
                     {user.avatar ? (
                       <Image src={user.avatar} alt="Avatar" fill className="object-cover" />
                     ) : (
