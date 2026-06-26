@@ -10,6 +10,7 @@ import UnifiedUploadForm from '@/app/components/UnifiedUploadForm';
 import PostCard from '@/app/components/PostCard';
 import BookCard from '@/app/components/BookCard';
 import ImageCard from '@/app/components/ImageCard';
+import GoldDoodleLoader from '@/app/components/GoldDoodleLoader';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -186,15 +187,15 @@ export default function FeedPage() {
         </AnimatePresence>
 
         {loading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="w-8 h-8 text-white/40 animate-spin" />
+          <div className="flex justify-center py-32">
+            <GoldDoodleLoader />
           </div>
         ) : feedItems.length > 0 ? (
           <div className="flex flex-col gap-6 sm:gap-8">
             {feedItems.map((item) => renderFeedItem(item))}
 
             <div ref={observerTarget} className="h-20 w-full flex items-center justify-center">
-              {loadingMore && <Loader2 className="w-6 h-6 text-white/40 animate-spin" />}
+              {loadingMore && <GoldDoodleLoader text="" />}
             </div>
 
             {!hasMore && feedItems.length > 0 && (
