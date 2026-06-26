@@ -1,19 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
-import {
-  Container,
-  Paper,
-  TextField,
-  Button,
-  Box,
-  Typography,
-  Link,
-  Alert,
-  CircularProgress,
-} from '@mui/material';
+import { motion, useMotionTemplate, useMotionValue } from 'framer-motion';
+import { Loader2, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginForm() {
   const [formData, setFormData] = useState({
@@ -22,12 +13,18 @@ export default function LoginForm() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  // Kinetic Lighting Setup
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  function handleMouseMove({ currentTarget, clientX, clientY }: React.MouseEvent) {
+    const { left, top } = currentTarget.getBoundingClientRect();
+    mouseX.set(clientX - left);
+    mouseY.set(clientY - top);
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -43,9 +40,7 @@ export default function LoginForm() {
       const response = await axios.post('/api/auth/login', formData);
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
-      router.push('/feed');
-      // Refresh page to update all components with new auth state
-      window.location.reload();
+      window.location.href = '/feed';
     } catch (err: any) {
       if (err.response?.data?.error) {
         setError(err.response.data.error);
@@ -61,125 +56,130 @@ export default function LoginForm() {
     }
   };
 
-  if (!mounted) {
-    return (
-      <Box sx={{ backgroundColor: '#000000', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <CircularProgress sx={{ color: '#ffffff' }} />
-      </Box>
-    );
-  }
-
   return (
-    <Box sx={{ backgroundColor: '#000000', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <Container maxWidth="sm">
-          <Paper elevation={8} sx={{ p: 4, borderRadius: 2, backgroundColor: '#1e1e1e' }}>
-            <Typography variant="h3" component="h2" sx={{ fontWeight: 'bold', mb: 1, color: '#ffffff' }}>
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      
+      {/* Ambient glowing orb behind the glass */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-white/5 rounded-full blur-[120px] pointer-events-none"></div>
+
+      <motion.div
+        onMouseMove={handleMouseMove}
+        className="relative w-full max-w-md group"
+      >
+        {/* Kinetic Lighting Specular Mask (Main Panel) */}
+        <motion.div
+          className="pointer-events-none absolute -inset-px rounded-3xl opacity-0 transition-opacity duration-500 group-hover:opacity-100 z-20"
+          style={{
+            background: useMotionTemplate`
+              radial-gradient(
+                600px circle at ${mouseX}px ${mouseY}px,
+                rgba(255,255,255,0.15),
+                transparent 40%
+              )
+            `,
+          }}
+        />
+
+        {/* Spatial Glass Canvas */}
+        <div className="relative rounded-3xl bg-black/40 backdrop-blur-xl border border-white/10 shadow-lg p-10 overflow-hidden z-10">
+
+          <div className="relative z-30">
+            {/* Header */}
+            <h2 className="text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-white/90 to-white/40 mb-2">
               Gallery Davinci
-            </Typography>
-            <Typography variant="body1" sx={{ color: '#b0b0b0', mb: 3 }}>
-              Masuk ke akun Anda
-            </Typography>
+            </h2>
+            <p className="text-white/40 mb-10 text-sm font-bold tracking-widest">
+              M A S U K &nbsp; A K U N
+            </p>
 
             {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
-              </Alert>
+              <div className="mb-8 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 backdrop-blur-md shadow-inner">
+                <p className="text-sm text-red-400 font-medium tracking-wide">{error}</p>
+              </div>
             )}
 
-            <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <TextField
-                fullWidth
-                label="Email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="Masukkan email"
-                required
-                variant="outlined"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    color: '#ffffff',
-                    '& fieldset': {
-                      borderColor: '#404040',
-                    },
-                    '&:hover fieldset': {
-                      borderColor: '#606060',
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: '#ffffff',
-                    },
-                  },
-                  '& .MuiInputBase-input::placeholder': {
-                    color: '#808080',
-                    opacity: 1,
-                  },
-                }}
-              />
+            <form onSubmit={handleSubmit} className="space-y-6">
+              
+              {/* Email Input */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-white/40 uppercase tracking-wider ml-2">
+                  Email
+                </label>
+                <div className="relative group/input">
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                    placeholder="Masukkan email"
+                    className="w-full bg-black/40 border border-black/50 border-t-black/80 border-b-white/10 rounded-2xl px-5 py-4 text-white placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-white/20 focus:bg-black/40 transition-all shadow-inner font-medium tracking-wide"
+                  />
+                </div>
+              </div>
 
-              <TextField
-                fullWidth
-                label="Password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Masukkan password"
-                required
-                variant="outlined"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    color: '#ffffff',
-                    '& fieldset': {
-                      borderColor: '#404040',
-                    },
-                    '&:hover fieldset': {
-                      borderColor: '#606060',
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: '#ffffff',
-                    },
-                  },
-                  '& .MuiInputBase-input::placeholder': {
-                    color: '#808080',
-                    opacity: 1,
-                  },
-                }}
-              />
+              {/* Password Input */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-white/40 uppercase tracking-wider ml-2">
+                  Password
+                </label>
+                <div className="relative group/input">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                    placeholder="Masukkan password"
+                    className="w-full bg-black/40 border border-black/50 border-t-black/80 border-b-white/10 rounded-2xl px-5 py-4 pr-12 text-white placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-white/20 focus:bg-black/40 transition-all shadow-inner font-medium tracking-wide"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
 
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                disabled={loading}
-                sx={{
-                  backgroundColor: '#000000',
-                  color: '#ffffff',
-                  fontWeight: 'bold',
-                  py: 1.5,
-                  '&:hover': {
-                    backgroundColor: '#333333',
-                  },
-                  '&:disabled': {
-                    opacity: 0.5,
-                    color: '#ffffff',
-                  },
-                }}
-              >
-                {loading ? <CircularProgress size={24} sx={{ color: '#ffffff' }} /> : 'Masuk'}
-              </Button>
-            </Box>
+              {/* Machined Titanium Button */}
+              <div className="pt-4">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="group/btn relative w-full overflow-hidden bg-gradient-to-b from-white/15 to-white/5 hover:from-white/20 hover:to-white/10 border border-white/10 border-b-black/50 text-white font-medium py-4 rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                >
+                  {/* Button Micro-Sheen Hover Effect */}
+                  <div className="absolute inset-0 -translate-x-[150%] group-hover/btn:translate-x-[150%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 ease-in-out pointer-events-none"></div>
 
-            <Box sx={{ textAlign: 'center', mt: 3 }}>
-              <Typography variant="body2" sx={{ color: '#b0b0b0' }}>
+                  {loading ? (
+                    <Loader2 className="w-5 h-5 animate-spin text-white/90" />
+                  ) : (
+                    <>
+                      <span className="tracking-widest text-sm font-bold">MASUK</span>
+                      <ArrowRight className="w-4 h-4 text-white/90 group-hover/btn:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+
+            {/* Footer Link */}
+            <div className="mt-10 text-center">
+              <p className="text-sm font-medium tracking-wide text-white/40">
                 Belum punya akun?{' '}
-                <Link href="/register" underline="hover" sx={{ color: '#ffffff', fontWeight: 'bold' }}>
+                <a
+                  href="/register"
+                  className="text-white/80 hover:text-white transition-colors relative after:absolute after:bottom-0 after:left-0 after:h-[1px] after:w-full after:bg-white/30 after:transition-all hover:after:bg-white"
+                >
                   Daftar di sini
-                </Link>
-              </Typography>
-            </Box>
-          </Paper>
-        </Container>
-      </Box>
-    );
-  }
+                </a>
+              </p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}

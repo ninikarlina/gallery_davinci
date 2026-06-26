@@ -1,24 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Box,
-  TextField,
-  Button,
-  ToggleButtonGroup,
-  ToggleButton,
-  Paper,
-  Typography,
-  Alert,
-  CircularProgress,
-} from '@mui/material';
-import {
-  Article as ArticleIcon,
-  Book as BookIcon,
-  Image as ImageIcon,
-  CloudUpload as UploadIcon,
-} from '@mui/icons-material';
 import axios from 'axios';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  FileText, 
+  Book, 
+  Image as ImageIcon, 
+  UploadCloud, 
+  X, 
+  Plus, 
+  CheckCircle2, 
+  AlertCircle, 
+  Loader2 
+} from 'lucide-react';
 
 interface UnifiedUploadFormProps {
   onUploadSuccess: () => void;
@@ -35,23 +30,20 @@ export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadForm
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const handleContentTypeChange = (_event: React.MouseEvent<HTMLElement>, newType: 'post' | 'book' | 'image' | null) => {
-    if (newType !== null) {
-      setContentType(newType);
-      setTitle('');
-      setContent('');
-      setFile(null);
-      setFiles([]);
-      setPreviews([]);
-      setError('');
-      setSuccess('');
-    }
+  const handleContentTypeChange = (newType: 'post' | 'book' | 'image') => {
+    setContentType(newType);
+    setTitle('');
+    setContent('');
+    setFile(null);
+    setFiles([]);
+    setPreviews([]);
+    setError('');
+    setSuccess('');
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       if (contentType === 'book') {
-        // Book: single PDF file
         const selectedFile = e.target.files[0];
         if (selectedFile.type !== 'application/pdf') {
           setError('Hanya file PDF yang diperbolehkan untuk buku');
@@ -60,11 +52,9 @@ export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadForm
         setFile(selectedFile);
         setError('');
       } else if (contentType === 'image') {
-        // Image: multiple files
         const selectedFiles = Array.from(e.target.files);
         const MAX_FILES = 15;
         
-        // Combine with existing files
         const combinedFiles = [...files, ...selectedFiles];
         
         if (combinedFiles.length > MAX_FILES) {
@@ -72,7 +62,6 @@ export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadForm
           return;
         }
         
-        // Validate all files
         for (const file of selectedFiles) {
           if (!file.type.startsWith('image/')) {
             setError('Hanya file gambar yang diperbolehkan');
@@ -84,7 +73,6 @@ export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadForm
           }
         }
         
-        // Create previews
         const newPreviews: string[] = [];
         let loadedCount = 0;
         
@@ -127,7 +115,6 @@ export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadForm
       setLoading(true);
 
       if (contentType === 'post') {
-        // Upload post/puisi
         await axios.post(
           '/api/posts',
           { title, content },
@@ -135,7 +122,6 @@ export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadForm
         );
         setSuccess('Puisi berhasil dibagikan!');
       } else if (contentType === 'book') {
-        // Upload book (single PDF)
         if (!file) {
           setError('Pilih file PDF terlebih dahulu');
           setLoading(false);
@@ -155,7 +141,6 @@ export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadForm
         });
         setSuccess('Buku berhasil diupload!');
       } else if (contentType === 'image') {
-        // Upload images (multiple files)
         if (files.length === 0) {
           setError('Pilih minimal 1 foto terlebih dahulu');
           setLoading(false);
@@ -178,13 +163,16 @@ export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadForm
         setSuccess('Gambar berhasil diupload!');
       }
 
-      // Reset form
       setTitle('');
       setContent('');
       setFile(null);
       setFiles([]);
       setPreviews([]);
       onUploadSuccess();
+      
+      // Auto clear success message after 3 seconds
+      setTimeout(() => setSuccess(''), 3000);
+      
     } catch (err: any) {
       setError(err.response?.data?.error || 'Terjadi kesalahan');
     } finally {
@@ -192,352 +180,238 @@ export default function UnifiedUploadForm({ onUploadSuccess }: UnifiedUploadForm
     }
   };
 
+  const getTypeStyles = () => {
+    switch (contentType) {
+      case 'book': return {
+        activeTab: 'bg-amber-500/20 border-amber-500/50 text-amber-400',
+        activeIcon: 'text-amber-400',
+        ring: 'focus:ring-amber-500/30',
+        btn: 'bg-gradient-to-b from-amber-500/80 to-amber-600/80 hover:from-amber-400 hover:to-amber-500 border-amber-400/50 text-white shadow-lg',
+        borderFocus: 'focus:border-amber-500/50',
+      };
+      case 'image': return {
+        activeTab: 'bg-purple-500/20 border-purple-500/50 text-purple-400',
+        activeIcon: 'text-purple-400',
+        ring: 'focus:ring-purple-500/30',
+        btn: 'bg-gradient-to-b from-purple-500/80 to-purple-600/80 hover:from-purple-400 hover:to-purple-500 border-purple-400/50 text-white shadow-lg',
+        borderFocus: 'focus:border-purple-500/50',
+      };
+      default: return {
+        activeTab: 'bg-white/10 border-white/20 text-white',
+        activeIcon: 'text-white',
+        ring: 'focus:ring-white/20',
+        btn: 'bg-white/10 hover:bg-white/20 border-white/20 text-white hover:text-white shadow-lg',
+        borderFocus: 'focus:border-white/30',
+      };
+    }
+  };
+
+  const styles = getTypeStyles();
+
   return (
-    <Paper sx={{ 
-      p: { xs: 2, sm: 3 }, 
-      backgroundColor: '#1e1e1e', 
-      borderRadius: 2,
-      width: '100%',
-      boxSizing: 'border-box',
-      overflow: 'hidden',
-    }}>
-      <ToggleButtonGroup
-        value={contentType}
-        exclusive
-        onChange={handleContentTypeChange}
-        fullWidth
-        sx={{ 
-          mb: 3,
-          flexWrap: { xs: 'wrap', sm: 'nowrap' },
-        }}
-      >
-        <ToggleButton
-          value="post"
-          sx={{
-            color: '#b0b0b0',
-            borderColor: '#404040',
-            fontSize: { xs: '0.75rem', sm: '0.875rem' },
-            px: { xs: 1, sm: 2 },
-            py: { xs: 0.75, sm: 1 },
-            flex: { xs: '1 1 100%', sm: '1 1 auto' },
-            '&.Mui-selected': {
-              backgroundColor: '#333333',
-              color: '#ffffff',
-              '&:hover': { backgroundColor: '#404040' },
-            },
-            '& .MuiSvgIcon-root': {
-              fontSize: { xs: '1rem', sm: '1.25rem' },
-              mr: { xs: 0.5, sm: 1 },
-            },
-          }}
-        >
-          <ArticleIcon /> 
-          <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Puisi/Karya</Box>
-          <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>Puisi</Box>
-        </ToggleButton>
-        <ToggleButton
-          value="book"
-          sx={{
-            color: '#b0b0b0',
-            borderColor: '#404040',
-            fontSize: { xs: '0.75rem', sm: '0.875rem' },
-            px: { xs: 1, sm: 2 },
-            py: { xs: 0.75, sm: 1 },
-            flex: { xs: '1 1 50%', sm: '1 1 auto' },
-            '&.Mui-selected': {
-              backgroundColor: '#333333',
-              color: '#ffffff',
-              '&:hover': { backgroundColor: '#404040' },
-            },
-            '& .MuiSvgIcon-root': {
-              fontSize: { xs: '1rem', sm: '1.25rem' },
-              mr: { xs: 0.5, sm: 1 },
-            },
-          }}
-        >
-          <BookIcon /> 
-          <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Buku PDF</Box>
-          <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>Buku</Box>
-        </ToggleButton>
-        <ToggleButton
-          value="image"
-          sx={{
-            color: '#b0b0b0',
-            borderColor: '#404040',
-            fontSize: { xs: '0.75rem', sm: '0.875rem' },
-            px: { xs: 1, sm: 2 },
-            py: { xs: 0.75, sm: 1 },
-            flex: { xs: '1 1 50%', sm: '1 1 auto' },
-            '&.Mui-selected': {
-              backgroundColor: '#333333',
-              color: '#ffffff',
-              '&:hover': { backgroundColor: '#404040' },
-            },
-            '& .MuiSvgIcon-root': {
-              fontSize: { xs: '1rem', sm: '1.25rem' },
-              mr: { xs: 0.5, sm: 1 },
-            },
-          }}
-        >
-          <ImageIcon /> Gambar
-        </ToggleButton>
-      </ToggleButtonGroup>
+    <div className="w-full relative bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl shadow-lg overflow-hidden mb-12">
+      <div className={`absolute -top-32 -left-32 w-64 h-64 rounded-full blur-[100px] opacity-20 pointer-events-none transition-colors duration-500 ${contentType === 'book' ? 'bg-amber-500' : contentType === 'image' ? 'bg-purple-500' : 'bg-white'}`} />
+      
+      {/* Tabs */}
+      <div className="relative z-10 flex p-2 gap-2 bg-black/40 border-b border-white/5">
+        {[
+          { id: 'post', label: 'Puisi / Karya', icon: FileText },
+          { id: 'book', label: 'Buku PDF', icon: Book },
+          { id: 'image', label: 'Galeri Gambar', icon: ImageIcon }
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => handleContentTypeChange(tab.id as any)}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-2xl text-sm font-bold tracking-widest uppercase transition-all duration-300 ${
+              contentType === tab.id 
+                ? styles.activeTab
+                : 'text-white/40 hover:text-white/80 hover:bg-white/5 border border-transparent'
+            }`}
+          >
+            <tab.icon className={`w-4 h-4 ${contentType === tab.id ? styles.activeIcon : 'text-white/30'}`} />
+            <span className="hidden sm:inline">{tab.label}</span>
+            <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
+          </button>
+        ))}
+      </div>
 
-      <form onSubmit={handleSubmit}>
-        <TextField
-          fullWidth
-          label="Judul"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          required
-          sx={{
-            mb: 2,
-            '& .MuiOutlinedInput-root': {
-              color: '#ffffff',
-              '& fieldset': { borderColor: '#404040' },
-              '&:hover fieldset': { borderColor: '#b0b0b0' },
-            },
-            '& .MuiInputLabel-root': { color: '#b0b0b0' },
-          }}
-        />
-
-        <TextField
-          fullWidth
-          label={
-            contentType === 'post'
-              ? 'Isi Puisi/Karya'
-              : contentType === 'book'
-              ? 'Deskripsi Buku'
-              : 'Caption Gambar'
-          }
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          multiline
-          rows={contentType === 'post' ? 6 : 3}
-          required={contentType === 'post'}
-          sx={{
-            mb: 2,
-            '& .MuiOutlinedInput-root': {
-              color: '#ffffff',
-              '& fieldset': { borderColor: '#404040' },
-              '&:hover fieldset': { borderColor: '#b0b0b0' },
-            },
-            '& .MuiInputLabel-root': { color: '#b0b0b0' },
-          }}
-        />
-
-        {(contentType === 'book' || contentType === 'image') && (
-          <Box sx={{ mb: 2 }}>
-            <Button
-              variant="outlined"
-              component="label"
-              startIcon={<UploadIcon />}
-              fullWidth
-              sx={{
-                borderColor: '#404040',
-                color: '#ffffff',
-                fontSize: { xs: '0.8rem', sm: '0.875rem' },
-                px: { xs: 1.5, sm: 2 },
-                py: { xs: 0.75, sm: 1 },
-                textAlign: 'left',
-                justifyContent: 'flex-start',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                '&:hover': { borderColor: '#ffffff', backgroundColor: '#333333' },
-                '& .MuiButton-startIcon': {
-                  mr: { xs: 0.5, sm: 1 },
-                },
-              }}
-            >
-              <Box 
-                component="span" 
-                sx={{ 
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  display: 'block',
-                  width: '100%',
-                }}
+      <div className="relative z-10 p-6 sm:p-8">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          
+          {/* Alerts */}
+          <AnimatePresence mode="popLayout">
+            {error && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
+                className="flex items-center gap-3 p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-bold tracking-wide shadow-inner"
               >
-                {contentType === 'book'
-                  ? (file ? file.name : 'Pilih PDF')
-                  : (files.length > 0 ? `${files.length} foto dipilih` : 'Pilih Gambar')
-                }
-              </Box>
-              <input
-                type="file"
-                hidden
-                accept={contentType === 'book' ? 'application/pdf' : 'image/*'}
-                multiple={contentType === 'image'}
-                onChange={handleFileChange}
-              />
-            </Button>
-            {file && contentType === 'book' && (
-              <Typography variant="caption" sx={{ ml: 2, color: '#b0b0b0' }}>
-                {(file.size / 1024 / 1024).toFixed(2)} MB
-              </Typography>
+                <AlertCircle className="w-5 h-5 shrink-0" />
+                <p>{error}</p>
+              </motion.div>
             )}
-            
-            {/* Preview untuk multiple images */}
-            {contentType === 'image' && previews.length > 0 && (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="body2" sx={{ color: '#b0b0b0', mb: 1, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-                  Preview ({previews.length} foto)
-                </Typography>
-                <Box sx={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: { 
-                    xs: 'repeat(auto-fill, minmax(70px, 1fr))',
-                    sm: 'repeat(auto-fill, minmax(100px, 1fr))' 
-                  }, 
-                  gap: { xs: 0.5, sm: 1 },
-                }}>
-                  {previews.map((preview, index) => (
-                    <Box
-                      key={index}
-                      sx={{
-                        position: 'relative',
-                        paddingTop: '100%',
-                        borderRadius: 1,
-                        overflow: 'hidden',
-                        '&:hover .delete-btn': { opacity: 1 },
-                      }}
-                    >
-                      <Box
-                        component="img"
-                        src={preview}
-                        alt={`preview-${index}`}
-                        sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                        }}
-                      />
-                      <Button
-                        className="delete-btn"
-                        onClick={() => removeFile(index)}
-                        sx={{
-                          position: 'absolute',
-                          top: 4,
-                          right: 4,
-                          minWidth: 'auto',
-                          width: { xs: 20, sm: 24 },
-                          height: { xs: 20, sm: 24 },
-                          padding: 0,
-                          borderRadius: '50%',
-                          fontSize: { xs: '1rem', sm: '1.25rem' },
-                          backgroundColor: 'rgba(220, 38, 38, 0.9)',
-                          color: 'white',
-                          opacity: 0,
-                          transition: 'opacity 0.2s',
-                          '&:hover': { backgroundColor: 'rgba(185, 28, 28, 1)' },
-                        }}
-                      >
-                        ×
-                      </Button>
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          bottom: { xs: 2, sm: 4 },
-                          left: { xs: 2, sm: 4 },
-                          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                          color: 'white',
-                          fontSize: { xs: '0.6rem', sm: '0.7rem' },
-                          px: 0.5,
-                          py: 0.25,
-                          borderRadius: 0.5,
-                        }}
-                      >
-                        {index + 1}
-                      </Box>
-                    </Box>
-                  ))}
-                  
-                  {/* Add More Button */}
-                  {previews.length < 15 && (
-                    <Box
-                      component="label"
-                      sx={{
-                        position: 'relative',
-                        paddingTop: '100%',
-                        border: '2px dashed #404040',
-                        borderRadius: 1,
-                        cursor: 'pointer',
-                        transition: 'border-color 0.2s',
-                        '&:hover': { borderColor: '#ffffff' },
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#b0b0b0',
-                        }}
-                      >
-                        <Typography variant="h5" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>+</Typography>
-                        <Typography variant="caption" sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}>Tambah</Typography>
-                      </Box>
-                      <input
-                        type="file"
-                        hidden
-                        accept="image/*"
-                        multiple
-                        onChange={handleFileChange}
-                      />
-                    </Box>
-                  )}
-                </Box>
-                <Typography variant="caption" sx={{ color: '#808080', mt: 1, display: 'block', fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
-                  Total: {previews.length}/15 foto
-                </Typography>
-              </Box>
+            {success && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
+                className="flex items-center gap-3 p-4 rounded-2xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm font-bold tracking-wide shadow-inner"
+              >
+                <CheckCircle2 className="w-5 h-5 shrink-0" />
+                <p>{success}</p>
+              </motion.div>
             )}
-          </Box>
-        )}
+          </AnimatePresence>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
+          {/* Title Input */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold tracking-wider text-white/40 uppercase ml-2">
+              Judul Karya
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              placeholder="Masukkan judul di sini..."
+              className={`w-full bg-black/40 border border-black/50 border-t-black/80 border-b-white/10 rounded-2xl px-5 py-4 text-sm font-medium text-white placeholder-white/20 focus:outline-none focus:ring-1 shadow-inner transition-all ${styles.borderFocus} ${styles.ring}`}
+            />
+          </div>
 
-        {success && (
-          <Alert severity="success" sx={{ mb: 2 }}>
-            {success}
-          </Alert>
-        )}
+          {/* Content / Description Input */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold tracking-wider text-white/40 uppercase ml-2">
+              {contentType === 'post' ? 'Isi Puisi / Karya Tulis' : contentType === 'book' ? 'Deskripsi Buku' : 'Caption Gambar'}
+            </label>
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              required={contentType === 'post'}
+              rows={contentType === 'post' ? 8 : 4}
+              placeholder={contentType === 'post' ? "Tuliskan keindahan sastra Anda..." : "Tambahkan deskripsi singkat..."}
+              className={`w-full bg-black/40 border border-black/50 border-t-black/80 border-b-white/10 rounded-2xl px-5 py-4 text-sm font-medium text-white placeholder-white/20 focus:outline-none focus:ring-1 shadow-inner transition-all custom-scrollbar resize-none ${styles.borderFocus} ${styles.ring}`}
+            />
+          </div>
 
-        <Button
-          type="submit"
-          variant="contained"
-          fullWidth
-          disabled={loading}
-          sx={{
-            backgroundColor: '#000000',
-            color: '#ffffff',
-            border: '1px solid #404040',
-            '&:hover': { backgroundColor: '#333333' },
-            '&:disabled': { backgroundColor: '#1a1a1a', color: '#666666' },
-          }}
-        >
-          {loading ? (
-            <CircularProgress size={24} sx={{ color: '#ffffff' }} />
-          ) : (
-            `Bagikan ${contentType === 'post' ? 'Puisi' : contentType === 'book' ? 'Buku' : 'Gambar'}`
+          {/* File Upload Zone */}
+          {(contentType === 'book' || contentType === 'image') && (
+            <div className="space-y-3">
+              <label className="text-xs font-bold tracking-wider text-white/40 uppercase ml-2">
+                File Unggahan
+              </label>
+              
+              <div className="relative group">
+                <input
+                  type="file"
+                  id="file-upload"
+                  className="hidden"
+                  accept={contentType === 'book' ? 'application/pdf' : 'image/*'}
+                  multiple={contentType === 'image'}
+                  onChange={handleFileChange}
+                />
+                <label
+                  htmlFor="file-upload"
+                  className={`flex flex-col items-center justify-center w-full min-h-[120px] rounded-2xl border-2 border-dashed cursor-pointer transition-all duration-300 bg-black/40 hover:bg-white/5 
+                  ${contentType === 'book' ? 'border-amber-500/20 hover:border-amber-500/50' : 'border-purple-500/20 hover:border-purple-500/50'}`}
+                >
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
+                    <UploadCloud className={`w-8 h-8 mb-3 opacity-50 group-hover:opacity-100 transition-opacity ${contentType === 'book' ? 'text-amber-400' : 'text-purple-400'}`} />
+                    <p className="text-sm font-bold text-white/70 mb-1">
+                      {contentType === 'book' 
+                        ? (file ? file.name : 'Klik untuk memilih file PDF')
+                        : (files.length > 0 ? `${files.length} gambar dipilih` : 'Klik untuk memilih Gambar')}
+                    </p>
+                    <p className="text-sm text-white/30 font-medium tracking-wide">
+                      {contentType === 'book' ? 'Maksimal ukuran file 10MB' : 'Bisa pilih banyak gambar sekaligus (Maks 15)'}
+                    </p>
+                  </div>
+                </label>
+              </div>
+
+              {/* PDF Preview Meta */}
+              {contentType === 'book' && file && (
+                <div className="flex items-center gap-2 pl-2">
+                  <Book className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="text-xs font-bold tracking-widest text-amber-400/80 uppercase">
+                    Ukuran: {(file.size / 1024 / 1024).toFixed(2)} MB
+                  </span>
+                </div>
+              )}
+
+              {/* Image Previews */}
+              {contentType === 'image' && previews.length > 0 && (
+                <div className="mt-4 bg-black/40 border border-white/5 rounded-2xl p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-sm font-bold text-white/50 tracking-widest uppercase">
+                      Galeri ({previews.length}/15)
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                    <AnimatePresence>
+                      {previews.map((preview, index) => (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
+                          key={index}
+                          className="relative aspect-square rounded-xl overflow-hidden group/preview border border-white/10 shadow-lg"
+                        >
+                          <img
+                            src={preview}
+                            alt={`Preview ${index}`}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover/preview:scale-110"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center">
+                            <button
+                              type="button"
+                              onClick={(e) => { e.preventDefault(); removeFile(index); }}
+                              className="w-8 h-8 bg-red-500/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center backdrop-blur-sm transition-transform hover:scale-110 shadow-xl"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <div className="absolute bottom-1 left-1 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded text-xs font-bold text-white">
+                            {index + 1}
+                          </div>
+                        </motion.div>
+                      ))}
+                      {previews.length < 15 && (
+                        <motion.label
+                          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                          htmlFor="file-upload"
+                          className="relative aspect-square rounded-xl border-2 border-dashed border-white/10 hover:border-purple-500/50 hover:bg-purple-500/5 cursor-pointer flex flex-col items-center justify-center transition-all group/add"
+                        >
+                          <Plus className="w-6 h-6 text-white/30 group-hover/add:text-purple-400 transition-colors mb-1" />
+                          <span className="text-xs font-bold tracking-widest text-white/30 group-hover/add:text-purple-400 uppercase">Tambah</span>
+                        </motion.label>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
-        </Button>
-      </form>
-    </Paper>
+
+          {/* Submit Button */}
+          <div className="pt-4 border-t border-white/5">
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full relative flex items-center justify-center gap-2 py-4 px-6 rounded-xl text-sm font-bold tracking-wider uppercase transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 border ${styles.btn}`}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span className="">Memproses...</span>
+                </>
+              ) : (
+                <>
+                  <UploadCloud className="w-5 h-5" />
+                  <span className="">
+                    Bagikan {contentType === 'post' ? 'Puisi' : contentType === 'book' ? 'Buku PDF' : 'Karya Gambar'}
+                  </span>
+                </>
+              )}
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
   );
 }

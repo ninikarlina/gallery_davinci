@@ -80,12 +80,12 @@ export default function GalleryPage() {
                     <h3 className="font-semibold text-gray-800 text-sm mb-1 truncate">
                       {image.title}
                     </h3>
-                    <p className="text-gray-600 text-xs mb-2">
+                    <p className="text-gray-600 text-sm mb-2">
                       oleh <span className="font-semibold">{image.uploader.username}</span>
                     </p>
 
                     {image.description && (
-                      <p className="text-gray-700 text-xs mb-3 line-clamp-2">
+                      <p className="text-gray-700 text-sm mb-3 line-clamp-2">
                         {image.description}
                       </p>
                     )}

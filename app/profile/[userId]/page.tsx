@@ -1,951 +1,18 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import {
-  Container,
-  Paper,
-  Typography,
-  Avatar,
-  Button,
-  TextField,
-  Box,
-  CircularProgress,
-  Alert,
-  IconButton,
-  Grid,
-  Divider,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
-  Card,
-  CardContent,
-  Chip,
-} from '@mui/material';
-import { Edit, PhotoCamera, Delete, Add, MoreVert as MoreVertIcon, Article as ArticleIcon, MenuBook as BookIcon, Image as ImageIcon } from '@mui/icons-material';
 import axios from 'axios';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Loader2, AlertCircle, Edit2, Camera, Trash2, Calendar, LayoutGrid, Type, AtSign, Mail, 
+  CheckCircle2, Plus, PenTool, Book, Image as ImageIcon
+} from 'lucide-react';
+
 import UnifiedUploadForm from '@/app/components/UnifiedUploadForm';
-
-// Edit Dialog Imports
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-} from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
-
-// ContentCard component to render different types of content
-function ContentCard({ content, isOwnContent, onDelete, onRefresh }: {
-  content: any;
-  isOwnContent: boolean;
-  onDelete: () => void;
-  onRefresh: () => void;
-}) {
-  const [token, setToken] = useState<string | null>(null);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editLoading, setEditLoading] = useState(false);
-  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
-  const [isExpanded, setIsExpanded] = useState(false);
-  
-  // Edit form states
-  const [editTitle, setEditTitle] = useState(content.title || '');
-  const [editContent, setEditContent] = useState(content.content || '');
-  const [editDescription, setEditDescription] = useState(content.description || '');
-  const [editCaption, setEditCaption] = useState(content.caption || '');
-
-  useEffect(() => {
-    setToken(localStorage.getItem('token'));
-  }, []);
-
-  const handleDelete = async () => {
-    if (!confirm(`Apakah Anda yakin ingin menghapus ${content.contentType === 'post' ? 'postingan' : content.contentType === 'book' ? 'buku' : 'gambar'} ini?`)) return;
-
-    try {
-      let endpoint = '';
-      if (content.contentType === 'post') endpoint = `/api/posts/${content.id}`;
-      else if (content.contentType === 'book') endpoint = `/api/books/${content.id}`;
-      else if (content.contentType === 'image') endpoint = `/api/upload/images/${content.id}`;
-
-      await axios.delete(endpoint, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      
-      onDelete();
-    } catch (error) {
-      console.error('Error deleting content:', error);
-    }
-  };
-
-  const handleEdit = async () => {
-    setEditLoading(true);
-    try {
-      let endpoint = '';
-      let data = {};
-
-      if (content.contentType === 'post') {
-        endpoint = `/api/posts/${content.id}`;
-        data = { title: editTitle, content: editContent };
-      } else if (content.contentType === 'book') {
-        endpoint = `/api/books/${content.id}`;
-        data = { title: editTitle, description: editDescription };
-      } else if (content.contentType === 'image') {
-        endpoint = `/api/upload/images/${content.id}`;
-        data = { title: editTitle, caption: editCaption };
-      }
-
-      await axios.put(endpoint, data, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      setEditDialogOpen(false);
-      onRefresh();
-    } catch (error) {
-      console.error('Error updating content:', error);
-      alert('Gagal mengupdate konten');
-    } finally {
-      setEditLoading(false);
-    }
-  };
-
-  const handleOpenEdit = () => {
-    setEditTitle(content.title);
-    setEditContent(content.content || '');
-    setEditDescription(content.description || '');
-    setEditCaption(content.caption || '');
-    setEditDialogOpen(true);
-  };
-
-  // Function to get first 10 lines of content for posts
-  const getPreviewContent = () => {
-    if (content.contentType !== 'post' || !content.content) return content.content;
-    const lines = content.content.split('\n');
-    if (lines.length <= 10) return content.content;
-    return lines.slice(0, 10).join('\n');
-  };
-
-  // Function to get first 10 lines of description for books
-  const getPreviewDescription = () => {
-    if (content.contentType !== 'book' || !content.description) return content.description;
-    const lines = content.description.split('\n');
-    if (lines.length <= 10) return content.description;
-    return lines.slice(0, 10).join('\n');
-  };
-
-  // Function to get first 10 lines of caption for images
-  const getPreviewCaption = () => {
-    if (content.contentType !== 'image' || !content.caption) return content.caption;
-    const lines = content.caption.split('\n');
-    if (lines.length <= 10) return content.caption;
-    return lines.slice(0, 10).join('\n');
-  };
-
-  const contentLines = content.content ? content.content.split('\n') : [];
-  const hasMoreContent = content.contentType === 'post' && contentLines.length > 10;
-  const displayContent = isExpanded ? content.content : getPreviewContent();
-
-  const descriptionLines = content.description ? content.description.split('\n') : [];
-  const hasMoreDescription = content.contentType === 'book' && descriptionLines.length > 10;
-  const displayDescription = isExpanded ? content.description : getPreviewDescription();
-
-  const captionLines = content.caption ? content.caption.split('\n') : [];
-  const hasMoreCaption = content.contentType === 'image' && captionLines.length > 10;
-  const displayCaption = isExpanded ? content.caption : getPreviewCaption();
-
-  // Render Post
-  if (content.contentType === 'post') {
-    return (
-      <>
-        <Card sx={{ backgroundColor: '#1e1e1e', color: '#ffffff' }}>
-          <CardContent>
-            {/* Header with Chip and Menu */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 2 }}>
-              <Chip
-                icon={<ArticleIcon />}
-                label="Karya Sastra"
-                size="small"
-                sx={{ backgroundColor: '#333333', color: '#ffffff' }}
-              />
-              {isOwnContent && (
-                <IconButton
-                  onClick={(e) => setMenuAnchor(e.currentTarget)}
-                  size="small"
-                  sx={{ color: '#b0b0b0', '&:hover': { backgroundColor: '#333333' } }}
-                >
-                  <MoreVertIcon fontSize="small" />
-                </IconButton>
-              )}
-            </Box>
-
-            {/* Title */}
-            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1, color: '#ffffff' }}>
-              {content.title}
-            </Typography>
-
-            {/* Content */}
-            <Typography
-              variant="body1"
-              sx={{
-                color: '#e0e0e0',
-                whiteSpace: 'pre-wrap',
-                fontStyle: 'italic',
-                lineHeight: 1.8,
-                mb: hasMoreContent ? 1 : 2,
-              }}
-            >
-              {displayContent}
-            </Typography>
-
-            {/* Read More Button */}
-            {hasMoreContent && (
-              <Button
-                onClick={() => setIsExpanded(!isExpanded)}
-                size="small"
-                sx={{
-                  color: '#5599ff',
-                  textTransform: 'none',
-                  mb: 2,
-                  '&:hover': { backgroundColor: '#333333' },
-                }}
-              >
-                {isExpanded ? 'Sembunyikan' : 'Baca Selengkapnya'}
-              </Button>
-            )}
-
-            {/* Date */}
-            <Typography variant="caption" sx={{ color: '#808080', display: 'block' }}>
-              {new Date(content.createdAt).toLocaleDateString('id-ID', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-              })}
-            </Typography>
-          </CardContent>
-        </Card>
-
-        {/* Menu for Edit/Delete */}
-        <Menu
-          anchorEl={menuAnchor}
-          open={Boolean(menuAnchor)}
-          onClose={() => setMenuAnchor(null)}
-          PaperProps={{
-            sx: {
-              backgroundColor: '#2a2a2a',
-              color: '#ffffff',
-            },
-          }}
-        >
-          <MenuItem
-            onClick={() => {
-              setMenuAnchor(null);
-              handleOpenEdit();
-            }}
-            sx={{ '&:hover': { backgroundColor: '#333333' } }}
-          >
-            <ListItemIcon>
-              <Edit fontSize="small" sx={{ color: '#5599ff' }} />
-            </ListItemIcon>
-            <ListItemText>Edit</ListItemText>
-          </MenuItem>
-          <MenuItem
-            onClick={() => {
-              setMenuAnchor(null);
-              handleDelete();
-            }}
-            sx={{ '&:hover': { backgroundColor: '#333333' } }}
-          >
-            <ListItemIcon>
-              <Delete fontSize="small" sx={{ color: '#ff5555' }} />
-            </ListItemIcon>
-            <ListItemText>Hapus</ListItemText>
-          </MenuItem>
-        </Menu>
-
-        {/* Edit Dialog */}
-        <Dialog
-          open={editDialogOpen}
-          onClose={() => setEditDialogOpen(false)}
-          maxWidth="sm"
-          fullWidth
-          PaperProps={{
-            sx: {
-              backgroundColor: '#1e1e1e',
-              color: '#ffffff',
-            },
-          }}
-        >
-          <DialogTitle sx={{ borderBottom: '1px solid #333333' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="h6">Edit Post</Typography>
-              <IconButton onClick={() => setEditDialogOpen(false)} size="small" sx={{ color: '#b0b0b0' }}>
-                <CloseIcon />
-              </IconButton>
-            </Box>
-          </DialogTitle>
-          <DialogContent sx={{ mt: 2 }}>
-            <TextField
-              fullWidth
-              label="Judul"
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              margin="normal"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  color: '#ffffff',
-                  '& fieldset': { borderColor: '#404040' },
-                  '&:hover fieldset': { borderColor: '#b0b0b0' },
-                },
-                '& .MuiInputLabel-root': { color: '#b0b0b0' },
-              }}
-            />
-            <TextField
-              fullWidth
-              label="Konten"
-              value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
-              margin="normal"
-              multiline
-              rows={6}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  color: '#ffffff',
-                  '& fieldset': { borderColor: '#404040' },
-                  '&:hover fieldset': { borderColor: '#b0b0b0' },
-                },
-                '& .MuiInputLabel-root': { color: '#b0b0b0' },
-              }}
-            />
-          </DialogContent>
-          <DialogActions sx={{ borderTop: '1px solid #333333', p: 2 }}>
-            <Button
-              onClick={() => setEditDialogOpen(false)}
-              sx={{ color: '#b0b0b0' }}
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={handleEdit}
-              variant="contained"
-              disabled={editLoading}
-              sx={{
-                backgroundColor: '#5599ff',
-                '&:hover': { backgroundColor: '#4488ee' },
-              }}
-            >
-              {editLoading ? 'Menyimpan...' : 'Simpan'}
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </>
-    );
-  }
-
-  // Render Book
-  if (content.contentType === 'book') {
-    return (
-      <>
-        <Card sx={{ backgroundColor: '#1e1e1e', color: '#ffffff' }}>
-          <CardContent>
-            {/* Header with Chip and Menu */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 2 }}>
-              <Chip
-                icon={<BookIcon />}
-                label="Buku PDF"
-                size="small"
-                sx={{ backgroundColor: '#333333', color: '#ffffff' }}
-              />
-              {isOwnContent && (
-                <IconButton
-                  onClick={(e) => setMenuAnchor(e.currentTarget)}
-                  size="small"
-                  sx={{ color: '#b0b0b0', '&:hover': { backgroundColor: '#333333' } }}
-                >
-                  <MoreVertIcon fontSize="small" />
-                </IconButton>
-              )}
-            </Box>
-
-            {/* Title */}
-            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1, color: '#ffffff' }}>
-              {content.title}
-            </Typography>
-
-            {/* Description */}
-            {content.description && (
-              <>
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    color: '#b0b0b0', 
-                    mb: hasMoreDescription ? 1 : 2,
-                    whiteSpace: 'pre-wrap',
-                  }}
-                >
-                  {displayDescription}
-                </Typography>
-                
-                {/* Read More Button */}
-                {hasMoreDescription && (
-                  <Button
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    size="small"
-                    sx={{
-                      color: '#5599ff',
-                      textTransform: 'none',
-                      mb: 2,
-                      '&:hover': { backgroundColor: '#333333' },
-                    }}
-                  >
-                    {isExpanded ? 'Sembunyikan' : 'Baca Selengkapnya'}
-                  </Button>
-                )}
-              </>
-            )}
-
-            {/* PDF Buttons */}
-            <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-              <Button
-                variant="outlined"
-                href={content.pdfUrl}
-                target="_blank"
-                sx={{
-                  borderColor: '#404040',
-                  color: '#fff',
-                  '&:hover': { borderColor: '#505050', bgcolor: '#1a1a1a' },
-                }}
-              >
-                📄 Buka PDF
-              </Button>
-            </Box>
-
-            {/* Date */}
-            <Typography variant="caption" sx={{ color: '#808080', display: 'block' }}>
-              {new Date(content.createdAt).toLocaleDateString('id-ID', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-              })}
-            </Typography>
-          </CardContent>
-        </Card>
-
-        {/* Menu for Edit/Delete */}
-        <Menu
-          anchorEl={menuAnchor}
-          open={Boolean(menuAnchor)}
-          onClose={() => setMenuAnchor(null)}
-          PaperProps={{
-            sx: {
-              backgroundColor: '#2a2a2a',
-              color: '#ffffff',
-              '& .MuiMenuItem-root:hover': {
-                backgroundColor: '#333333',
-              },
-            },
-          }}
-        >
-          <MenuItem
-            onClick={() => {
-              setMenuAnchor(null);
-              handleOpenEdit();
-            }}
-          >
-            <ListItemIcon>
-              <Edit sx={{ color: '#5599ff' }} fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Edit</ListItemText>
-          </MenuItem>
-          <MenuItem
-            onClick={() => {
-              setMenuAnchor(null);
-              handleDelete();
-            }}
-          >
-            <ListItemIcon>
-              <Delete sx={{ color: '#ff5555' }} fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Hapus</ListItemText>
-          </MenuItem>
-        </Menu>
-
-        {/* Edit Dialog */}
-        <Dialog
-          open={editDialogOpen}
-          onClose={() => setEditDialogOpen(false)}
-          maxWidth="sm"
-          fullWidth
-          PaperProps={{
-            sx: {
-              backgroundColor: '#1e1e1e',
-              color: '#ffffff',
-            },
-          }}
-        >
-          <DialogTitle sx={{ borderBottom: '1px solid #333333' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="h6">Edit Buku</Typography>
-              <IconButton onClick={() => setEditDialogOpen(false)} size="small" sx={{ color: '#b0b0b0' }}>
-                <CloseIcon />
-              </IconButton>
-            </Box>
-          </DialogTitle>
-          <DialogContent sx={{ mt: 2 }}>
-            <TextField
-              fullWidth
-              label="Judul Buku"
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              margin="normal"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  color: '#ffffff',
-                  '& fieldset': { borderColor: '#404040' },
-                  '&:hover fieldset': { borderColor: '#b0b0b0' },
-                },
-                '& .MuiInputLabel-root': { color: '#b0b0b0' },
-              }}
-            />
-            <TextField
-              fullWidth
-              label="Deskripsi"
-              value={editDescription}
-              onChange={(e) => setEditDescription(e.target.value)}
-              margin="normal"
-              multiline
-              rows={4}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  color: '#ffffff',
-                  '& fieldset': { borderColor: '#404040' },
-                  '&:hover fieldset': { borderColor: '#b0b0b0' },
-                },
-                '& .MuiInputLabel-root': { color: '#b0b0b0' },
-              }}
-            />
-          </DialogContent>
-          <DialogActions sx={{ borderTop: '1px solid #333333', p: 2 }}>
-            <Button
-              onClick={() => setEditDialogOpen(false)}
-              sx={{ color: '#b0b0b0' }}
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={handleEdit}
-              variant="contained"
-              disabled={editLoading}
-              sx={{
-                backgroundColor: '#5599ff',
-                '&:hover': { backgroundColor: '#4488ee' },
-              }}
-            >
-              {editLoading ? 'Menyimpan...' : 'Simpan'}
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </>
-    );
-  }
-
-  // Render Image
-  if (content.contentType === 'image') {
-    const [currentImageIndex, setCurrentImageIndex] = useState(0);
-    const [dragOffset, setDragOffset] = useState(0);
-    const [isDragging, setIsDragging] = useState(false);
-    const imageItems = content.images || [];
-    
-    // Swipe gesture states
-    const touchStartX = useRef<number>(0);
-    const touchEndX = useRef<number>(0);
-    const imageRef = useRef<HTMLDivElement>(null);
-
-    // Swipe gesture handlers
-    const handleTouchStart = (e: React.TouchEvent) => {
-      touchStartX.current = e.touches[0].clientX;
-      setIsDragging(true);
-    };
-
-    const handleTouchMove = (e: React.TouchEvent) => {
-      if (!touchStartX.current) return;
-      
-      touchEndX.current = e.touches[0].clientX;
-      const diff = touchEndX.current - touchStartX.current;
-      
-      // Apply drag offset with resistance at edges
-      if (imageItems.length > 1) {
-        setDragOffset(diff * 0.5); // 0.5 for resistance effect
-      }
-    };
-
-    const handleTouchEnd = () => {
-      setIsDragging(false);
-      
-      if (!touchStartX.current || !touchEndX.current) {
-        setDragOffset(0);
-        return;
-      }
-      
-      const swipeDistance = touchStartX.current - touchEndX.current;
-      const minSwipeDistance = 50;
-
-      if (Math.abs(swipeDistance) > minSwipeDistance) {
-        if (swipeDistance > 0) {
-          handleNextImage();
-        } else {
-          handlePrevImage();
-        }
-      }
-
-      setDragOffset(0);
-      touchStartX.current = 0;
-      touchEndX.current = 0;
-    };
-
-    const handlePrevImage = () => {
-      setCurrentImageIndex((prev) => (prev === 0 ? imageItems.length - 1 : prev - 1));
-    };
-
-    const handleNextImage = () => {
-      setCurrentImageIndex((prev) => (prev === imageItems.length - 1 ? 0 : prev + 1));
-    };
-
-    return (
-      <>
-        <Card sx={{ backgroundColor: '#1e1e1e', color: '#ffffff' }}>
-          <CardContent>
-            {/* Header with Chip and Menu */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 2 }}>
-              <Chip
-                icon={<ImageIcon />}
-                label="Gambar"
-                size="small"
-                sx={{ backgroundColor: '#333333', color: '#ffffff' }}
-              />
-              {isOwnContent && (
-                <IconButton
-                  onClick={(e) => setMenuAnchor(e.currentTarget)}
-                  size="small"
-                  sx={{ color: '#b0b0b0', '&:hover': { backgroundColor: '#333333' } }}
-                >
-                  <MoreVertIcon fontSize="small" />
-                </IconButton>
-              )}
-            </Box>
-
-            {/* Title */}
-            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1, color: '#ffffff' }}>
-              {content.title}
-            </Typography>
-
-            {/* Caption */}
-            {content.caption && (
-              <>
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    color: '#b0b0b0', 
-                    mb: hasMoreCaption ? 1 : 2,
-                    whiteSpace: 'pre-wrap',
-                  }}
-                >
-                  {displayCaption}
-                </Typography>
-                
-                {/* Read More Button */}
-                {hasMoreCaption && (
-                  <Button
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    size="small"
-                    sx={{
-                      color: '#5599ff',
-                      textTransform: 'none',
-                      mb: 2,
-                      '&:hover': { backgroundColor: '#333333' },
-                    }}
-                  >
-                    {isExpanded ? 'Sembunyikan' : 'Baca Selengkapnya'}
-                  </Button>
-                )}
-              </>
-            )}
-
-            {/* Image Carousel */}
-            {imageItems.length > 0 ? (
-              <Box 
-                ref={imageRef}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-                sx={{ 
-                  position: 'relative', 
-                  mb: 2,
-                  width: '100%',
-                  height: { xs: 300, sm: 400, md: 500 },
-                  backgroundColor: '#000000',
-                  borderRadius: 2,
-                  overflow: 'hidden',
-                  touchAction: 'pan-y pinch-zoom',
-                }}
-              >
-                <Box
-                  component="img"
-                  src={imageItems[currentImageIndex]?.imageUrl}
-                  alt={`${content.title}-${currentImageIndex}`}
-                  sx={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'contain',
-                    userSelect: 'none',
-                    WebkitUserDrag: 'none',
-                    transform: `translateX(${dragOffset}px)`,
-                    transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    willChange: 'transform',
-                  }}
-                />
-                
-                {/* Navigation Arrows */}
-                {imageItems.length > 1 && (
-                  <>
-                    <IconButton
-                      onClick={handlePrevImage}
-                      sx={{
-                        position: 'absolute',
-                        left: { xs: 4, sm: 8 },
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                        color: '#ffffff',
-                        width: { xs: 32, sm: 40 },
-                        height: { xs: 32, sm: 40 },
-                        '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
-                        zIndex: 2,
-                      }}
-                    >
-                      ‹
-                    </IconButton>
-                    <IconButton
-                      onClick={handleNextImage}
-                      sx={{
-                        position: 'absolute',
-                        right: { xs: 4, sm: 8 },
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                        color: '#ffffff',
-                        width: { xs: 32, sm: 40 },
-                        height: { xs: 32, sm: 40 },
-                        '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
-                        zIndex: 2,
-                      }}
-                    >
-                      ›
-                    </IconButton>
-                    
-                    {/* Image Counter */}
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        bottom: { xs: 4, sm: 8 },
-                        right: { xs: 4, sm: 8 },
-                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                        color: '#ffffff',
-                        px: { xs: 1, sm: 1.5 },
-                        py: { xs: 0.25, sm: 0.5 },
-                        borderRadius: 1,
-                        fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                        fontWeight: 'bold',
-                        zIndex: 2,
-                      }}
-                    >
-                      {currentImageIndex + 1} / {imageItems.length}
-                    </Box>
-                    
-                    {/* Dot Indicators */}
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        bottom: { xs: 4, sm: 8 },
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        display: 'flex',
-                        gap: { xs: 0.5, sm: 1 },
-                        zIndex: 2,
-                        backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                        px: 1,
-                        py: 0.5,
-                        borderRadius: 2,
-                      }}
-                    >
-                      {imageItems.map((_: any, idx: number) => (
-                        <Box
-                          key={idx}
-                          onClick={() => setCurrentImageIndex(idx)}
-                          sx={{
-                            width: { xs: 6, sm: 8 },
-                            height: { xs: 6, sm: 8 },
-                            borderRadius: '50%',
-                            backgroundColor: idx === currentImageIndex ? '#ffffff' : 'rgba(255, 255, 255, 0.5)',
-                            cursor: 'pointer',
-                            transition: 'all 0.3s',
-                            '&:hover': {
-                              backgroundColor: '#ffffff',
-                              transform: 'scale(1.2)',
-                            },
-                          }}
-                        />
-                      ))}
-                    </Box>
-                  </>
-                )}
-              </Box>
-            ) : (
-              <Box sx={{ 
-                height: { xs: 300, sm: 400, md: 500 },
-                backgroundColor: '#000000',
-                borderRadius: 2,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                mb: 2,
-              }}>
-                <Typography variant="body2" sx={{ color: '#808080' }}>
-                  Tidak ada gambar
-                </Typography>
-              </Box>
-            )}
-
-            {/* Date */}
-            <Typography variant="caption" sx={{ color: '#808080', display: 'block' }}>
-              {new Date(content.createdAt).toLocaleDateString('id-ID', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-              })}
-            </Typography>
-          </CardContent>
-        </Card>
-
-        {/* Menu for Edit/Delete */}
-        <Menu
-          anchorEl={menuAnchor}
-          open={Boolean(menuAnchor)}
-          onClose={() => setMenuAnchor(null)}
-          PaperProps={{
-            sx: {
-              backgroundColor: '#2a2a2a',
-              color: '#ffffff',
-              '& .MuiMenuItem-root:hover': {
-                backgroundColor: '#333333',
-              },
-            },
-          }}
-        >
-          <MenuItem
-            onClick={() => {
-              setMenuAnchor(null);
-              handleOpenEdit();
-            }}
-          >
-            <ListItemIcon>
-              <Edit sx={{ color: '#5599ff' }} fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Edit</ListItemText>
-          </MenuItem>
-          <MenuItem
-            onClick={() => {
-              setMenuAnchor(null);
-              handleDelete();
-            }}
-          >
-            <ListItemIcon>
-              <Delete sx={{ color: '#ff5555' }} fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Hapus</ListItemText>
-          </MenuItem>
-        </Menu>
-
-        {/* Edit Dialog */}
-        <Dialog
-          open={editDialogOpen}
-          onClose={() => setEditDialogOpen(false)}
-          maxWidth="sm"
-          fullWidth
-          PaperProps={{
-            sx: {
-              backgroundColor: '#1e1e1e',
-              color: '#ffffff',
-            },
-          }}
-        >
-          <DialogTitle sx={{ borderBottom: '1px solid #333333' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="h6">Edit Gambar</Typography>
-              <IconButton onClick={() => setEditDialogOpen(false)} size="small" sx={{ color: '#b0b0b0' }}>
-                <CloseIcon />
-              </IconButton>
-            </Box>
-          </DialogTitle>
-          <DialogContent sx={{ mt: 2 }}>
-            <TextField
-              fullWidth
-              label="Judul"
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              margin="normal"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  color: '#ffffff',
-                  '& fieldset': { borderColor: '#404040' },
-                  '&:hover fieldset': { borderColor: '#b0b0b0' },
-                },
-                '& .MuiInputLabel-root': { color: '#b0b0b0' },
-              }}
-            />
-            <TextField
-              fullWidth
-              label="Caption (opsional)"
-              value={editCaption}
-              onChange={(e) => setEditCaption(e.target.value)}
-              margin="normal"
-              multiline
-              rows={3}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  color: '#ffffff',
-                  '& fieldset': { borderColor: '#404040' },
-                  '&:hover fieldset': { borderColor: '#b0b0b0' },
-                },
-                '& .MuiInputLabel-root': { color: '#b0b0b0' },
-              }}
-            />
-          </DialogContent>
-          <DialogActions sx={{ borderTop: '1px solid #333333', p: 2 }}>
-            <Button
-              onClick={() => setEditDialogOpen(false)}
-              sx={{ color: '#b0b0b0' }}
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={handleEdit}
-              variant="contained"
-              disabled={editLoading}
-              sx={{
-                backgroundColor: '#5599ff',
-                '&:hover': { backgroundColor: '#4488ee' },
-              }}
-            >
-              {editLoading ? 'Menyimpan...' : 'Simpan'}
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </>
-    );
-  }
-
-  return null;
-}
+import PostCard from '@/app/components/PostCard';
+import BookCard from '@/app/components/BookCard';
+import ImageCard from '@/app/components/ImageCard';
 
 interface User {
   id: string;
@@ -981,25 +48,21 @@ export default function ProfilePage() {
   const [allContent, setAllContent] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  
   const [isEditing, setIsEditing] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [token, setToken] = useState<string | null>(null);
   
-  const [formData, setFormData] = useState({
-    fullName: '',
-    bio: '',
-  });
+  const [formData, setFormData] = useState({ fullName: '', bio: '' });
 
   const isOwnProfile = currentUser?.id === userId;
 
   useEffect(() => {
-    // Set client-side data
     const userData = localStorage.getItem('user');
-    if (userData) {
-      setCurrentUser(JSON.parse(userData));
-    }
+    if (userData) setCurrentUser(JSON.parse(userData));
     setToken(localStorage.getItem('token'));
     fetchUserProfile();
   }, [userId]);
@@ -1010,7 +73,6 @@ export default function ProfilePage() {
       const response = await axios.get(`/api/users/${userId}`);
       setUser(response.data.user);
       
-      // Merge all content types with contentType tag
       const posts = (response.data.posts || []).map((p: any) => ({ ...p, contentType: 'post' as const }));
       const books = (response.data.books || []).map((b: any) => ({ ...b, contentType: 'book' as const }));
       const images = (response.data.images || []).map((i: any) => ({ ...i, contentType: 'image' as const }));
@@ -1025,32 +87,28 @@ export default function ProfilePage() {
       });
     } catch (err) {
       console.error('Error fetching profile:', err);
-      setError('Gagal memuat profil');
+      setError('Gagal memuat profil pengguna');
     } finally {
       setLoading(false);
     }
   };
 
+  const showSuccess = (msg: string) => {
+    setSuccess(msg);
+    setTimeout(() => setSuccess(''), 3000);
+  };
+
   const handleUpdateProfile = async () => {
-    if (!token) {
-      setError('Silakan login terlebih dahulu');
-      return;
-    }
-
+    if (!token) return;
     try {
-      const response = await axios.put(
-        `/api/users/${userId}`,
-        formData,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
+      const response = await axios.put(`/api/users/${userId}`, formData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setUser(response.data.user);
       setIsEditing(false);
       setError('');
-
-      // Update localStorage
+      showSuccess('Profil berhasil diperbarui!');
+      
       const updatedUser = { ...currentUser, ...response.data.user };
       localStorage.setItem('user', JSON.stringify(updatedUser));
     } catch (err) {
@@ -1063,31 +121,21 @@ export default function ProfilePage() {
     const file = event.target.files?.[0];
     if (!file || !token) return;
 
-    const formData = new FormData();
-    formData.append('avatar', file);
+    const uploadData = new FormData();
+    uploadData.append('avatar', file);
 
     try {
       setUploadingAvatar(true);
       setError('');
-
-      const response = await axios.post(
-        `/api/users/${userId}/avatar`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
-
+      const response = await axios.post(`/api/users/${userId}/avatar`, uploadData, {
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' },
+      });
       setUser(response.data.user);
+      showSuccess('Foto profil diperbarui!');
       
-      // Update localStorage
       const updatedUser = { ...currentUser, avatar: response.data.user.avatar };
       localStorage.setItem('user', JSON.stringify(updatedUser));
     } catch (err: any) {
-      console.error('Error uploading avatar:', err);
       setError(err.response?.data?.error || 'Gagal mengunggah foto profil');
     } finally {
       setUploadingAvatar(false);
@@ -1096,478 +144,249 @@ export default function ProfilePage() {
 
   const handleDeleteAvatar = async () => {
     if (!token || !user?.avatar) return;
-
-    if (!confirm('Apakah Anda yakin ingin menghapus foto profil?')) return;
-
+    if (!confirm('Hapus foto profil?')) return;
     try {
       setUploadingAvatar(true);
-      setError('');
-
-      const response = await axios.delete(
-        `/api/users/${userId}/avatar`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
+      const response = await axios.delete(`/api/users/${userId}/avatar`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setUser(response.data.user);
+      showSuccess('Foto profil dihapus!');
       
-      // Update localStorage
       const updatedUser = { ...currentUser, avatar: null };
       localStorage.setItem('user', JSON.stringify(updatedUser));
     } catch (err: any) {
-      console.error('Error deleting avatar:', err);
       setError(err.response?.data?.error || 'Gagal menghapus foto profil');
     } finally {
       setUploadingAvatar(false);
     }
   };
 
-  const handleDeleteContent = async (contentId: string) => {
-    setAllContent(allContent.filter(c => c.id !== contentId));
-  };
-
   if (loading) {
     return (
-      <Container sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-        <CircularProgress />
-      </Container>
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-white/50 animate-spin" />
+      </div>
     );
   }
 
   if (!user) {
     return (
-      <Container sx={{ mt: 4 }}>
-        <Alert severity="error">Pengguna tidak ditemukan</Alert>
-      </Container>
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4">
+        <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-6 rounded-2xl flex items-center gap-3">
+          <AlertCircle className="w-6 h-6" />
+          <p className="font-medium">Pengguna tidak ditemukan.</p>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Container 
-      maxWidth="md" 
-      sx={{ 
-        mt: { xs: 2, sm: 3, md: 4 }, 
-        mb: { xs: 2, sm: 3, md: 4 },
-        px: { xs: 1.5, sm: 2, md: 3 },
-      }}
-    >
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
-          {error}
-        </Alert>
-      )}
+    <div className="min-h-screen bg-[#050505] relative pb-32">
+      {/* Background Noise & Glow */}
+      <div 
+        className="fixed inset-0 opacity-[0.03] pointer-events-none mix-blend-screen z-0"
+        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}
+      />
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[500px] bg-white/5 rounded-full blur-[150px] pointer-events-none -z-10" />
 
-      {/* Profile Header Section */}
-      <Paper sx={{ 
-        p: { xs: 1.5, sm: 3, md: 4 }, 
-        bgcolor: '#1e1e1e', 
-        mb: 3,
-        overflow: 'hidden',
-        width: '100%',
-        boxSizing: 'border-box',
-      }}>
-        {/* Profile Layout: Avatar Left, Info Table Right */}
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: { xs: 'row', sm: 'row' },
-          gap: { xs: 1.5, sm: 3, md: 4 },
-          mb: { xs: 2, sm: 3 },
-          alignItems: 'flex-start',
-          width: '100%',
-        }}>
-          {/* Left: Avatar */}
-          <Box sx={{ 
-            flexShrink: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: { xs: 0.5, sm: 1 },
-          }}>
-            <Box sx={{ position: 'relative' }}>
-              <Avatar
-                src={user.avatar ? user.avatar : undefined}
-                sx={{
-                  width: { xs: 70, sm: 100, md: 120 },
-                  height: { xs: 70, sm: 100, md: 120 },
-                  fontSize: { xs: 28, sm: 40, md: 48 },
-                  bgcolor: '#404040',
-                  border: { xs: '2px solid #333333', sm: '3px solid #333333' },
-                }}
-              >
-                {!user.avatar && user.fullName.charAt(0).toUpperCase()}
-              </Avatar>
-              
-              {uploadingAvatar && (
-                <CircularProgress
-                  size={24}
-                  sx={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    marginTop: '-12px',
-                    marginLeft: '-12px',
-                  }}
-                />
-              )}
-            </Box>
-
-            {isOwnProfile && (
-              <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                <IconButton
-                  component="label"
-                  disabled={uploadingAvatar}
-                  size="small"
-                  sx={{
-                    bgcolor: '#404040',
-                    color: '#ffffff',
-                    width: { xs: 28, sm: 36 },
-                    height: { xs: 28, sm: 36 },
-                    p: 0,
-                    '&:hover': { bgcolor: '#505050' },
-                    '& .MuiSvgIcon-root': {
-                      fontSize: { xs: '1rem', sm: '1.25rem' },
-                    },
-                  }}
-                >
-                  <PhotoCamera fontSize="small" />
-                  <input
-                    type="file"
-                    hidden
-                    accept="image/jpeg,image/png,image/gif,image/webp"
-                    onChange={handleAvatarUpload}
-                  />
-                </IconButton>
-
-                {user.avatar && (
-                  <IconButton
-                    onClick={handleDeleteAvatar}
-                    disabled={uploadingAvatar}
-                    size="small"
-                    sx={{
-                      bgcolor: '#404040',
-                      color: '#ffffff',
-                      width: { xs: 28, sm: 36 },
-                      height: { xs: 28, sm: 36 },
-                      p: 0,
-                      '&:hover': { bgcolor: '#505050' },
-                      '& .MuiSvgIcon-root': {
-                        fontSize: { xs: '1rem', sm: '1.25rem' },
-                      },
-                    }}
-                  >
-                    <Delete fontSize="small" />
-                  </IconButton>
-                )}
-              </Box>
-            )}
-          </Box>
-
-          {/* Right: User Info Table */}
-          <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-            {!isEditing ? (
-              <>
-                <Box
-                  component="table"
-                  sx={{
-                    width: '100%',
-                    borderCollapse: 'separate',
-                    borderSpacing: 0,
-                    tableLayout: 'fixed',
-                    '& td': {
-                      padding: { xs: '6px 2px', sm: '10px 8px' },
-                      borderBottom: '1px solid #333333',
-                      fontSize: { xs: '0.7rem', sm: '0.875rem', md: '1rem' },
-                      wordBreak: 'break-word',
-                      overflow: 'hidden',
-                    },
-                    '& tr:last-child td': {
-                      borderBottom: 'none',
-                    },
-                  }}
-                >
-                <tbody>
-                  <tr>
-                    <td style={{ color: '#b0b0b0', width: '35%', fontWeight: 500 }}>Nama</td>
-                    <td style={{ color: '#ffffff', fontWeight: 'bold', width: '65%' }}>
-                      <Box sx={{ 
-                        overflow: 'hidden', 
-                        textOverflow: 'ellipsis',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                      }}>
-                        {user.fullName}
-                      </Box>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style={{ color: '#b0b0b0', fontWeight: 500 }}>Username</td>
-                    <td style={{ color: '#ffffff' }}>
-                      <Box sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        @{user.username}
-                      </Box>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style={{ color: '#b0b0b0', fontWeight: 500 }}>Email</td>
-                    <td style={{ color: '#ffffff' }}>
-                      <Box sx={{ 
-                        overflow: 'hidden', 
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}>
-                        {user.email}
-                      </Box>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style={{ color: '#b0b0b0', fontWeight: 500 }}>Konten</td>
-                    <td style={{ color: '#ffffff' }}>{allContent.length} item</td>
-                  </tr>
-                  <tr>
-                    <td style={{ color: '#b0b0b0', fontWeight: 500, verticalAlign: 'top' }}>Bergabung</td>
-                    <td style={{ color: '#ffffff', wordBreak: 'break-word' }}>
-                      {new Date(user.createdAt).toLocaleDateString('id-ID', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric'
-                      })}
-                    </td>
-                  </tr>
-                </tbody>
-              </Box>
-              
-              {/* Bio Section - Separate below table */}
-              {user.bio && (
-                <Box sx={{ 
-                  mt: { xs: 2, sm: 3 },
-                  pt: { xs: 2, sm: 3 },
-                  borderTop: '1px solid #333333',
-                }}>
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      color: '#b0b0b0', 
-                      fontWeight: 500,
-                      mb: 1,
-                      fontSize: { xs: '0.7rem', sm: '0.875rem' },
-                    }}
-                  >
-                    Bio
-                  </Typography>
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      color: '#ffffff',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                      fontSize: { xs: '0.75rem', sm: '0.875rem', md: '1rem' },
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    {user.bio}
-                  </Typography>
-                </Box>
-              )}
-              </>
-            ) : (
-              <Box>
-                <TextField
-                  fullWidth
-                  label="Nama Lengkap"
-                  value={formData.fullName}
-                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                  size="small"
-                  sx={{ 
-                    mb: 2,
-                    '& .MuiInputBase-input': {
-                      fontSize: { xs: '0.875rem', sm: '1rem' },
-                    },
-                  }}
-                  InputLabelProps={{ 
-                    style: { color: '#b0b0b0', fontSize: '0.875rem' } 
-                  }}
-                  InputProps={{
-                    style: { color: '#fff', backgroundColor: '#2a2a2a' },
-                  }}
-                />
-                <TextField
-                  fullWidth
-                  label="Bio"
-                  multiline
-                  rows={3}
-                  value={formData.bio}
-                  onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                  size="small"
-                  sx={{ 
-                    mb: 2,
-                    '& .MuiInputBase-input': {
-                      fontSize: { xs: '0.875rem', sm: '1rem' },
-                    },
-                  }}
-                  InputLabelProps={{ 
-                    style: { color: '#b0b0b0', fontSize: '0.875rem' } 
-                  }}
-                  InputProps={{
-                    style: { color: '#fff', backgroundColor: '#2a2a2a' },
-                  }}
-                />
-              </Box>
-            )}
-          </Box>
-        </Box>
-
-        {/* Edit Profile Button/Actions */}
-        {isOwnProfile && (
-          <Box sx={{ mt: { xs: 1.5, sm: 2 }, width: '100%' }}>
-            {!isEditing ? (
-              <Button
-                variant="outlined"
-                startIcon={<Edit fontSize="small" />}
-                onClick={() => setIsEditing(true)}
-                fullWidth
-                sx={{
-                  borderColor: '#404040',
-                  color: '#fff',
-                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                  py: { xs: 0.75, sm: 1 },
-                  '&:hover': { borderColor: '#505050', bgcolor: '#1a1a1a' },
-                  '& .MuiButton-startIcon': {
-                    mr: { xs: 0.5, sm: 1 },
-                  },
-                }}
-              >
-                Edit Profil
-              </Button>
-            ) : (
-              <Box sx={{ display: 'flex', gap: { xs: 1, sm: 2 } }}>
-                <Button
-                  variant="contained"
-                  onClick={handleUpdateProfile}
-                  sx={{
-                    flex: 1,
-                    bgcolor: '#fff',
-                    color: '#000',
-                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                    py: { xs: 0.75, sm: 1 },
-                    '&:hover': { bgcolor: '#e0e0e0' },
-                  }}
-                >
-                  Simpan
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={() => {
-                    setIsEditing(false);
-                    setFormData({
-                      fullName: user.fullName,
-                      bio: user.bio || '',
-                    });
-                  }}
-                  sx={{
-                    flex: 1,
-                    borderColor: '#404040',
-                    color: '#fff',
-                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                    py: { xs: 0.75, sm: 1 },
-                    '&:hover': { borderColor: '#505050', bgcolor: '#1a1a1a' },
-                  }}
-                >
-                  Batal
-                </Button>
-              </Box>
-            )}
-          </Box>
-        )}
-      </Paper>
-
-      {/* Artworks Grid Section */}
-      <Paper sx={{ 
-        p: { xs: 1.5, sm: 3, md: 4 }, 
-        bgcolor: '#1e1e1e',
-        width: '100%',
-        boxSizing: 'border-box',
-        overflow: 'hidden',
-      }}>
-        {/* Content Section Header */}
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          mb: 2,
-          flexWrap: { xs: 'wrap', sm: 'nowrap' },
-          gap: { xs: 1, sm: 0 },
-        }}>
-          <Typography 
-            variant="h6" 
-            sx={{ 
-              color: '#fff',
-              fontSize: { xs: '1rem', sm: '1.25rem' },
-            }}
-          >
-            Konten ({allContent.length})
-          </Typography>
-          {isOwnProfile && (
-            <Button
-              variant="contained"
-              startIcon={<Add fontSize="small" />}
-              onClick={() => setShowCreatePost(!showCreatePost)}
-              sx={{
-                bgcolor: '#fff',
-                color: '#000',
-                fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                py: { xs: 0.5, sm: 0.75 },
-                px: { xs: 1.5, sm: 2 },
-                minWidth: { xs: 'auto', sm: 'auto' },
-                '&:hover': { bgcolor: '#e0e0e0' },
-                '& .MuiButton-startIcon': {
-                  mr: { xs: 0.5, sm: 1 },
-                },
-              }}
-            >
-              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                {showCreatePost ? 'Tutup' : 'Buat Konten'}
-              </Box>
-              <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
-                {showCreatePost ? 'Tutup' : 'Buat'}
-              </Box>
-            </Button>
-          )}
-        </Box>
-
-        {/* Create Content Form */}
-        {isOwnProfile && showCreatePost && (
-          <Box sx={{ mb: 3 }}>
-            <UnifiedUploadForm 
-              onUploadSuccess={() => {
-                setShowCreatePost(false);
-                fetchUserProfile();
-              }} 
-            />
-          </Box>
-        )}
-
-        <Divider sx={{ borderColor: '#333333', my: 3 }} />
+      <main className="relative z-10 w-full max-w-2xl mx-auto px-4 pt-6 sm:pt-10">
         
-        {allContent.length === 0 ? (
-          <Typography variant="body2" sx={{ color: '#b0b0b0', textAlign: 'center', py: 4 }}>
-            Belum ada konten
-          </Typography>
-        ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {allContent.map((content) => (
-              <ContentCard
-                key={content.id}
-                content={content}
-                isOwnContent={isOwnProfile}
-                onDelete={() => handleDeleteContent(content.id)}
-                onRefresh={fetchUserProfile}
+        {/* Alerts */}
+        <AnimatePresence mode="popLayout">
+          {error && (
+            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+              className="mb-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-medium flex items-center gap-3 backdrop-blur-md"
+            >
+              <AlertCircle className="w-5 h-5 shrink-0" /> <p>{error}</p>
+            </motion.div>
+          )}
+          {success && (
+            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+              className="mb-6 p-4 rounded-2xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm font-medium flex items-center gap-3 backdrop-blur-md"
+            >
+              <CheckCircle2 className="w-5 h-5 shrink-0" /> <p>{success}</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Profile Card */}
+        <div className="bg-[#0a0a0a]/80 backdrop-blur-[64px] border border-white/10 rounded-3xl p-6 sm:p-10 shadow-[0_40px_80px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.1)] overflow-hidden relative mb-8">
+          
+          <div className="flex flex-col sm:flex-row items-start gap-6 sm:gap-10">
+            {/* Avatar Section */}
+            <div className="flex flex-col items-center gap-3 mx-auto sm:mx-0">
+              <div className="relative group/avatar w-28 h-28 sm:w-36 sm:h-36 rounded-full bg-[#1e1e1e] border-4 border-[#050505] shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_20px_40px_rgba(0,0,0,0.5)] overflow-hidden flex items-center justify-center shrink-0">
+                {user.avatar ? (
+                  <img src={user.avatar} alt={user.fullName} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-4xl font-bold text-white/50">{user.fullName.charAt(0).toUpperCase()}</span>
+                )}
+                
+                {uploadingAvatar && (
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-20">
+                    <Loader2 className="w-8 h-8 text-white animate-spin" />
+                  </div>
+                )}
+
+                {isOwnProfile && !uploadingAvatar && (
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center gap-2 z-10 backdrop-blur-sm">
+                    <label className="cursor-pointer p-2 hover:bg-white/20 rounded-full transition-colors text-white">
+                      <Camera className="w-5 h-5" />
+                      <input type="file" hidden accept="image/*" onChange={handleAvatarUpload} />
+                    </label>
+                    {user.avatar && (
+                      <button onClick={handleDeleteAvatar} className="p-2 hover:bg-red-500/50 rounded-full transition-colors text-white">
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Info Section */}
+            <div className="flex-1 w-full space-y-5">
+              {!isEditing ? (
+                <>
+                  <div className="space-y-3">
+                    <div>
+                      <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">{user.fullName}</h1>
+                      <div className="flex items-center gap-2 text-white/50 text-sm mt-1">
+                        <AtSign className="w-3.5 h-3.5" /> <span>{user.username}</span>
+                      </div>
+                    </div>
+                    
+                    {user.bio && (
+                      <div className="bg-white/5 border border-white/5 rounded-2xl p-4 text-sm text-white/80 leading-relaxed shadow-[inset_0_2px_10px_rgba(0,0,0,0.2)]">
+                        {user.bio}
+                      </div>
+                    )}
+                    
+                    <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold tracking-widest text-white/30 uppercase mt-4">
+                      <div className="flex items-center gap-1.5"><LayoutGrid className="w-3.5 h-3.5" /> {allContent.length} Karya</div>
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5" /> 
+                        {new Date(user.createdAt).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {isOwnProfile && (
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="mt-6 w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-bold tracking-wider text-white uppercase transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Edit2 className="w-4 h-4" /> Edit Profil
+                    </button>
+                  )}
+                </>
+              ) : (
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold tracking-wider text-white/40 uppercase ml-2">Nama Lengkap</label>
+                    <div className="relative">
+                      <Type className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                      <input
+                        type="text"
+                        value={formData.fullName}
+                        onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                        className="w-full bg-[#050505]/60 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none focus:border-white/30 transition-colors shadow-[inset_0_2px_8px_rgba(0,0,0,0.6)]"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold tracking-wider text-white/40 uppercase ml-2">Bio</label>
+                    <textarea
+                      value={formData.bio}
+                      onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                      rows={3}
+                      className="w-full bg-[#050505]/60 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/30 transition-colors custom-scrollbar resize-none shadow-[inset_0_2px_8px_rgba(0,0,0,0.6)]"
+                    />
+                  </div>
+                  
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={handleUpdateProfile}
+                      className="flex-1 py-3 bg-white text-black border border-white rounded-xl text-sm font-bold tracking-wider uppercase transition-transform active:scale-95"
+                    >
+                      Simpan
+                    </button>
+                    <button
+                      onClick={() => { setIsEditing(false); setFormData({ fullName: user.fullName, bio: user.bio || '' }); }}
+                      className="flex-1 py-3 bg-transparent text-white border border-white/20 rounded-xl text-sm font-bold tracking-wider uppercase hover:bg-white/5 transition-colors active:scale-95"
+                    >
+                      Batal
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Content Section Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-bold tracking-tight text-white">Galeri Karya</h2>
+            <span className="px-3 py-1 bg-white/10 text-white/70 text-sm font-bold rounded-full border border-white/5">{allContent.length}</span>
+          </div>
+          
+          {isOwnProfile && (
+            <button
+              onClick={() => setShowCreatePost(!showCreatePost)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold tracking-wide uppercase transition-all duration-300 shadow-lg ${showCreatePost ? 'bg-white/10 text-white hover:bg-white/20 border border-white/10' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30'}`}
+            >
+              {showCreatePost ? <AlertCircle className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              <span className="hidden sm:inline">{showCreatePost ? 'Tutup Form' : 'Tambah Karya'}</span>
+              <span className="sm:hidden">{showCreatePost ? 'Tutup' : 'Tambah'}</span>
+            </button>
+          )}
+        </div>
+
+        {/* Create Content Form Dropdown */}
+        <AnimatePresence>
+          {showCreatePost && (
+            <motion.div
+              initial={{ opacity: 0, height: 0, scale: 0.95 }}
+              animate={{ opacity: 1, height: 'auto', scale: 1 }}
+              exit={{ opacity: 0, height: 0, scale: 0.95 }}
+              className="origin-top"
+            >
+              <UnifiedUploadForm 
+                onUploadSuccess={() => {
+                  setShowCreatePost(false);
+                  fetchUserProfile();
+                }} 
               />
-            ))}
-          </Box>
-        )}
-      </Paper>
-    </Container>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Content Grid/List */}
+        <div className="space-y-6">
+          {allContent.length === 0 ? (
+            <div className="text-center py-20 bg-[#0a0a0a]/40 backdrop-blur-[64px] border border-white/5 rounded-3xl">
+              <div className="flex justify-center gap-4 mb-6 opacity-30">
+                <PenTool className="w-6 h-6" />
+                <Book className="w-6 h-6" />
+                <ImageIcon className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-white/80 mb-2 tracking-wide">Belum ada karya</h3>
+              <p className="text-sm text-white/40 font-medium">{isOwnProfile ? 'Mulai bagikan karya terbaikmu di sini.' : 'Pengguna ini belum membagikan apa pun.'}</p>
+            </div>
+          ) : (
+            allContent.map((content) => (
+              <div key={content.id} className="bg-[#0a0a0a]/40 backdrop-blur-xl border border-white/5 rounded-3xl p-4 sm:p-6 shadow-xl">
+                {content.contentType === 'post' && <PostCard post={content} onDelete={fetchUserProfile} onRefresh={fetchUserProfile} />}
+                {content.contentType === 'book' && <BookCard book={content} onDelete={fetchUserProfile} onRefresh={fetchUserProfile} />}
+                {content.contentType === 'image' && <ImageCard image={content} onDelete={fetchUserProfile} onRefresh={fetchUserProfile} />}
+              </div>
+            ))
+          )}
+        </div>
+
+      </main>
+    </div>
   );
 }

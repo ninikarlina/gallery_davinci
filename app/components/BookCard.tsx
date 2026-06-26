@@ -1,41 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import {
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  Avatar,
-  IconButton,
-  Button,
-  TextField,
-  Chip,
-  Divider,
-  Collapse,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
-} from '@mui/material';
-import {
-  Favorite as FavoriteIcon,
-  FavoriteBorder as FavoriteBorderIcon,
-  ChatBubbleOutline as CommentIcon,
-  Delete as DeleteIcon,
-  Edit as EditIcon,
-  Send as SendIcon,
-  Book as BookIcon,
-  Download as DownloadIcon,
-  Close as CloseIcon,
-  MoreVert as MoreVertIcon,
-} from '@mui/icons-material';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Heart, MessageCircle, MoreHorizontal, Edit2, Trash2, Send, X, Book, Download, ExternalLink } from 'lucide-react';
 
 interface BookCardProps {
   book: any;
@@ -58,43 +27,48 @@ export default function BookCard({ book, onDelete, onRefresh }: BookCardProps) {
   const [editTitle, setEditTitle] = useState(book.title || '');
   const [editDescription, setEditDescription] = useState(book.description || '');
   const [editLoading, setEditLoading] = useState(false);
-  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentText, setEditCommentText] = useState('');
-  const [commentMenuAnchor, setCommentMenuAnchor] = useState<null | HTMLElement>(null);
-  const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
+  const [activeCommentMenuId, setActiveCommentMenuId] = useState<string | null>(null);
+
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Only run on client side
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const authToken = localStorage.getItem('token');
     setCurrentUser(user);
     setToken(authToken);
-
-    // Check if current user has liked this book
     const hasLiked = book.likes?.some((like: any) => like.userId === user.id) || false;
     setLiked(hasLiked);
   }, [book.likes]);
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsMenuOpen(false);
+        setActiveCommentMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleLike = async () => {
     if (!currentUser || !token) {
-      router.push('/login');
+      window.location.href = '/login';
       return;
     }
-    
-    // Optimistic update - update UI immediately
     const previousLiked = liked;
     const previousLikes = likes;
     setLiked(!liked);
     setLikes(liked ? likes - 1 : likes + 1);
-    
     try {
       await axios.post(`/api/books/${book.id}/like`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
     } catch (error) {
-      // Revert on error
       setLiked(previousLiked);
       setLikes(previousLikes);
       console.error('Error liking book:', error);
@@ -104,7 +78,7 @@ export default function BookCard({ book, onDelete, onRefresh }: BookCardProps) {
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser || !token) {
-      router.push('/login');
+      window.location.href = '/login';
       return;
     }
     if (!commentText.trim()) return;
@@ -116,8 +90,6 @@ export default function BookCard({ book, onDelete, onRefresh }: BookCardProps) {
         { text: commentText },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
-      // Update local comments state
       const newComment = {
         id: response.data.comment?.id || Date.now().toString(),
         content: commentText,
@@ -140,7 +112,6 @@ export default function BookCard({ book, onDelete, onRefresh }: BookCardProps) {
 
   const handleDelete = async () => {
     if (!confirm('Yakin ingin menghapus buku ini?')) return;
-
     try {
       await axios.delete(`/api/books/${book.id}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -156,7 +127,6 @@ export default function BookCard({ book, onDelete, onRefresh }: BookCardProps) {
       alert('Title dan description harus diisi');
       return;
     }
-
     setEditLoading(true);
     try {
       await axios.put(
@@ -174,37 +144,26 @@ export default function BookCard({ book, onDelete, onRefresh }: BookCardProps) {
     }
   };
 
-  const handleOpenEdit = () => {
-    setEditTitle(book.title);
-    setEditDescription(book.description);
-    setEditDialogOpen(true);
-  };
-
   const handleDeleteComment = async (commentId: string) => {
     if (!confirm('Hapus komentar ini?')) return;
-    
     try {
       await axios.delete(`/api/comments/${commentId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      // Update local state
       setComments(comments.filter((c: any) => c.id !== commentId));
     } catch (error) {
       console.error('Error deleting comment:', error);
-      alert('Gagal menghapus komentar');
     }
   };
 
   const handleEditComment = async (commentId: string) => {
     if (!editCommentText.trim()) return;
-    
     try {
       await axios.put(
         `/api/comments/${commentId}`,
         { content: editCommentText },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      // Update local state
       setComments(comments.map((c: any) => 
         c.id === commentId ? { ...c, content: editCommentText } : c
       ));
@@ -212,37 +171,13 @@ export default function BookCard({ book, onDelete, onRefresh }: BookCardProps) {
       setEditCommentText('');
     } catch (error) {
       console.error('Error editing comment:', error);
-      alert('Gagal mengubah komentar');
     }
-  };
-
-  const startEditComment = (commentId: string, currentContent: string) => {
-    setEditingCommentId(commentId);
-    setEditCommentText(currentContent);
-  };
-
-  const cancelEditComment = () => {
-    setEditingCommentId(null);
-    setEditCommentText('');
-  };
-
-  const handleCommentMenuOpen = (event: React.MouseEvent<HTMLElement>, commentId: string) => {
-    setCommentMenuAnchor(event.currentTarget);
-    setActiveCommentId(commentId);
-  };
-
-  const handleCommentMenuClose = () => {
-    setCommentMenuAnchor(null);
-    setActiveCommentId(null);
   };
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+      day: 'numeric', month: 'long', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
     });
   };
 
@@ -251,487 +186,341 @@ export default function BookCard({ book, onDelete, onRefresh }: BookCardProps) {
   const authorInitial = authorName.charAt(0).toUpperCase();
   const authorId = book.author?.id;
 
-  // Function to get first 10 lines of description
-  const getPreviewDescription = () => {
-    if (!book.description) return '';
-    const lines = book.description.split('\n');
-    if (lines.length <= 10) return book.description;
-    return lines.slice(0, 10).join('\n');
-  };
-
   const descriptionLines = book.description ? book.description.split('\n') : [];
   const hasMoreDescription = descriptionLines.length > 10;
-  const displayDescription = isExpanded ? book.description : getPreviewDescription();
+  const displayDescription = isExpanded ? book.description : (hasMoreDescription ? descriptionLines.slice(0, 10).join('\n') : book.description);
 
   return (
-    <Card sx={{ backgroundColor: '#1e1e1e', color: '#ffffff', mb: 2 }}>
-      <CardContent>
+    <>
+      <div className="relative pb-8 pt-4 border-b border-white/10 shadow-lg group/post">
+        
         {/* Header */}
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Avatar 
-            src={authorAvatar || undefined}
-            sx={{ 
-              bgcolor: '#404040', 
-              mr: 2,
-              cursor: authorId ? 'pointer' : 'default',
-            }}
-            onClick={() => authorId && router.push(`/profile/${authorId}`)}
-          >
-            {!authorAvatar && authorInitial}
-          </Avatar>
-          <Box sx={{ flex: 1 }}>
-            <Typography 
-              variant="subtitle2" 
-              sx={{ 
-                color: '#ffffff', 
-                fontWeight: 'bold',
-                cursor: authorId ? 'pointer' : 'default',
-                '&:hover': authorId ? { textDecoration: 'underline' } : {},
-              }}
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex items-center gap-3">
+            <div 
               onClick={() => authorId && router.push(`/profile/${authorId}`)}
+              className={`w-10 h-10 rounded-full overflow-hidden bg-black border border-white/10 shadow-inner flex items-center justify-center shrink-0 ${authorId ? 'cursor-pointer hover:border-white/30 transition-colors' : ''}`}
             >
-              {authorName}
-            </Typography>
-            <Typography variant="caption" sx={{ color: '#b0b0b0' }}>
-              {formatDate(book.createdAt)}
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Chip
-              icon={<BookIcon />}
-              label="Buku PDF"
-              size="small"
-              sx={{ backgroundColor: '#333333', color: '#ffffff' }}
-            />
-            {currentUser?.id === book.authorId && (
-              <IconButton
-                onClick={(e) => setMenuAnchor(e.currentTarget)}
-                size="small"
-                sx={{ color: '#b0b0b0', '&:hover': { backgroundColor: '#333333' } }}
-              >
-                <MoreVertIcon fontSize="small" />
-              </IconButton>
-            )}
-          </Box>
-        </Box>
-
-        {/* Menu for Edit/Delete */}
-        <Menu
-          anchorEl={menuAnchor}
-          open={Boolean(menuAnchor)}
-          onClose={() => setMenuAnchor(null)}
-          PaperProps={{
-            sx: {
-              backgroundColor: '#2a2a2a',
-              color: '#ffffff',
-            },
-          }}
-        >
-          <MenuItem
-            onClick={() => {
-              setMenuAnchor(null);
-              handleOpenEdit();
-            }}
-            sx={{ '&:hover': { backgroundColor: '#333333' } }}
-          >
-            <ListItemIcon>
-              <EditIcon fontSize="small" sx={{ color: '#5599ff' }} />
-            </ListItemIcon>
-            <ListItemText>Edit</ListItemText>
-          </MenuItem>
-          <MenuItem
-            onClick={() => {
-              setMenuAnchor(null);
-              handleDelete();
-            }}
-            sx={{ '&:hover': { backgroundColor: '#333333' } }}
-          >
-            <ListItemIcon>
-              <DeleteIcon fontSize="small" sx={{ color: '#ff5555' }} />
-            </ListItemIcon>
-            <ListItemText>Hapus</ListItemText>
-          </MenuItem>
-        </Menu>
-
-        {/* Menu for Comment Edit/Delete */}
-        <Menu
-          anchorEl={commentMenuAnchor}
-          open={Boolean(commentMenuAnchor)}
-          onClose={handleCommentMenuClose}
-          anchorOrigin={{
-            vertical: 'bottom',
-            horizontal: 'right',
-          }}
-          transformOrigin={{
-            vertical: 'top',
-            horizontal: 'right',
-          }}
-          PaperProps={{
-            sx: {
-              backgroundColor: '#2a2a2a',
-              color: '#ffffff',
-              minWidth: 120,
-            },
-          }}
-        >
-          <MenuItem
-            onClick={() => {
-              if (activeCommentId) {
-                const comment = comments?.find((c: any) => c.id === activeCommentId);
-                if (comment) {
-                  startEditComment(activeCommentId, comment.content);
-                }
-              }
-              handleCommentMenuClose();
-            }}
-            sx={{ '&:hover': { backgroundColor: '#333333' } }}
-          >
-            <ListItemIcon>
-              <EditIcon fontSize="small" sx={{ color: '#5599ff' }} />
-            </ListItemIcon>
-            <ListItemText>Edit</ListItemText>
-          </MenuItem>
-          <MenuItem
-            onClick={() => {
-              if (activeCommentId) {
-                handleDeleteComment(activeCommentId);
-              }
-              handleCommentMenuClose();
-            }}
-            sx={{ '&:hover': { backgroundColor: '#333333' } }}
-          >
-            <ListItemIcon>
-              <DeleteIcon fontSize="small" sx={{ color: '#ff5555' }} />
-            </ListItemIcon>
-            <ListItemText>Hapus</ListItemText>
-          </MenuItem>
-        </Menu>
-
-        {/* Title & Description */}
-        <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1, color: '#ffffff', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
-          {book.title}
-        </Typography>
-        {book.description && (
-          <>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                color: '#b0b0b0', 
-                mb: hasMoreDescription ? 1 : 2,
-                whiteSpace: 'pre-wrap',
-                fontSize: { xs: '0.875rem', sm: '1rem' },
-              }}
-            >
-              {displayDescription}
-            </Typography>
-            
-            {/* Read More Button */}
-            {hasMoreDescription && (
-              <Button
-                onClick={() => setIsExpanded(!isExpanded)}
-                size="small"
-                sx={{
-                  color: '#5599ff',
-                  textTransform: 'none',
-                  mb: 2,
-                  '&:hover': { backgroundColor: '#333333' },
-                }}
-              >
-                {isExpanded ? 'Sembunyikan' : 'Baca Selengkapnya'}
-              </Button>
-            )}
-          </>
-        )}
-
-        {/* PDF Buttons */}
-        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-          <Button
-            variant="outlined"
-            startIcon={<DownloadIcon />}
-            href={book.pdfUrl}
-            download
-            sx={{
-              borderColor: '#404040',
-              color: '#ffffff',
-              '&:hover': { borderColor: '#ffffff', backgroundColor: '#333333' },
-            }}
-          >
-            Download PDF
-          </Button>
-          <Button
-            variant="contained"
-            href={book.pdfUrl}
-            target="_blank"
-            sx={{
-              backgroundColor: '#5599ff',
-              color: '#ffffff',
-              '&:hover': { backgroundColor: '#4488ee' },
-            }}
-          >
-            Buka PDF
-          </Button>
-        </Box>
-        <Typography variant="caption" sx={{ color: '#808080', display: 'block', mb: 2 }}>
-          {(book.fileSize / 1024 / 1024).toFixed(2)} MB
-        </Typography>
-
-        <Divider sx={{ borderColor: '#333333', my: 2 }} />
-
-        {/* Actions */}
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Button
-            startIcon={liked ? <FavoriteIcon /> : <FavoriteBorderIcon />}
-            onClick={handleLike}
-            sx={{
-              color: liked ? '#ff5555' : '#b0b0b0',
-              '&:hover': { backgroundColor: '#333333' },
-            }}
-          >
-            {likes}
-          </Button>
-          <Button
-            startIcon={<CommentIcon />}
-            onClick={() => setShowComments(!showComments)}
-            sx={{
-              color: '#b0b0b0',
-              '&:hover': { backgroundColor: '#333333' },
-            }}
-          >
-            {comments?.length || 0}
-          </Button>
-        </Box>
-
-        {/* Comments Section */}
-        <Collapse in={showComments}>
-          <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #333333' }}>
-            {/* Comments List */}
-            <Box sx={{ maxHeight: 300, overflowY: 'auto', mb: 2 }}>
-              {comments && comments.length > 0 ? (
-                comments.map((comment: any, idx: number) => {
-                  const commentAuthorName = comment.author?.username || comment.author?.fullName || 'Anonim';
-                  const commentAuthorAvatar = comment.author?.avatar;
-                  const commentAuthorInitial = commentAuthorName.charAt(0).toUpperCase();
-                  const commentAuthorId = comment.author?.id;
-                  const isCommentOwner = currentUser?.id === commentAuthorId;
-                  const isEditing = editingCommentId === comment.id;
-                  
-                  return (
-                    <Box
-                      key={idx}
-                      sx={{
-                        backgroundColor: '#2a2a2a',
-                        p: 2,
-                        borderRadius: 1,
-                        mb: 1,
-                        display: 'flex',
-                        gap: 1.5,
-                        position: 'relative',
-                        overflow: 'visible',
-                      }}
-                    >
-                      <Avatar 
-                        src={commentAuthorAvatar || undefined}
-                        sx={{ 
-                          width: 32,
-                          height: 32,
-                          fontSize: 14,
-                          bgcolor: '#404040',
-                          cursor: commentAuthorId ? 'pointer' : 'default',
-                        }}
-                        onClick={() => commentAuthorId && router.push(`/profile/${commentAuthorId}`)}
-                      >
-                        {!commentAuthorAvatar && commentAuthorInitial}
-                      </Avatar>
-                      <Box sx={{ flex: 1 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <Typography 
-                            variant="subtitle2" 
-                            sx={{ 
-                              color: '#ffffff', 
-                              fontWeight: 'bold',
-                              cursor: commentAuthorId ? 'pointer' : 'default',
-                              display: 'inline-block',
-                              '&:hover': commentAuthorId ? { textDecoration: 'underline' } : {},
-                            }}
-                            onClick={() => commentAuthorId && router.push(`/profile/${commentAuthorId}`)}
-                          >
-                            {commentAuthorName}
-                          </Typography>
-                          {isCommentOwner && !isEditing && (
-                            <IconButton
-                              size="small"
-                              onClick={(e) => handleCommentMenuOpen(e, comment.id)}
-                              sx={{ color: '#b0b0b0', p: 0.5 }}
-                            >
-                              <MoreVertIcon fontSize="small" />
-                            </IconButton>
-                          )}
-                        </Box>
-                        
-                        {isEditing ? (
-                          <Box sx={{ mt: 1 }}>
-                            <TextField
-                              fullWidth
-                              size="small"
-                              multiline
-                              value={editCommentText}
-                              onChange={(e) => setEditCommentText(e.target.value)}
-                              sx={{
-                                mb: 1,
-                                '& .MuiOutlinedInput-root': {
-                                  color: '#ffffff',
-                                  backgroundColor: '#333333',
-                                  '& fieldset': { borderColor: '#404040' },
-                                },
-                              }}
-                            />
-                            <Box sx={{ display: 'flex', gap: 1 }}>
-                              <Button
-                                size="small"
-                                variant="contained"
-                                onClick={() => handleEditComment(comment.id)}
-                                sx={{ textTransform: 'none' }}
-                              >
-                                Simpan
-                              </Button>
-                              <Button
-                                size="small"
-                                onClick={cancelEditComment}
-                                sx={{ textTransform: 'none', color: '#b0b0b0' }}
-                              >
-                                Batal
-                              </Button>
-                            </Box>
-                          </Box>
-                        ) : (
-                          <Typography variant="body2" sx={{ color: '#e0e0e0', mt: 0.5 }}>
-                            {comment.content}
-                          </Typography>
-                        )}
-                      </Box>
-                    </Box>
-                  );
-                })
+              {authorAvatar ? (
+                <img src={authorAvatar} alt={authorName} className="w-full h-full object-cover" />
               ) : (
-                <Typography variant="body2" sx={{ color: '#808080', textAlign: 'center', py: 2 }}>
-                  Belum ada komentar
-                </Typography>
+                <span className="text-sm font-bold text-white/50">{authorInitial}</span>
               )}
-            </Box>
-
-            {/* Add Comment Form */}
-            <form onSubmit={handleAddComment}>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  placeholder="Tulis komentar..."
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      color: '#ffffff',
-                      backgroundColor: '#2a2a2a',
-                      '& fieldset': { borderColor: '#404040' },
-                      '&:hover fieldset': { borderColor: '#b0b0b0' },
-                    },
-                  }}
-                />
-                <Button
-                  type="submit"
-                  variant="contained"
-                  disabled={loading || !commentText.trim()}
-                  endIcon={<SendIcon />}
-                  sx={{
-                    backgroundColor: '#000000',
-                    border: '1px solid #404040',
-                    '&:hover': { backgroundColor: '#333333' },
-                    '&:disabled': { backgroundColor: '#1a1a1a', color: '#666666' },
-                  }}
+            </div>
+            
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <span 
+                  onClick={() => authorId && router.push(`/profile/${authorId}`)}
+                  className={`text-sm font-bold text-white/90 ${authorId ? 'cursor-pointer hover:underline' : ''}`}
                 >
-                  Kirim
-                </Button>
-              </Box>
-            </form>
-          </Box>
-        </Collapse>
-      </CardContent>
+                  {authorName}
+                </span>
+                <span className="flex items-center gap-1 bg-amber-900/30 border border-amber-500/20 rounded-full px-2 py-0.5 shadow-inner">
+                  <Book className="w-2.5 h-2.5 text-amber-400" />
+                  <span className="text-xs font-bold tracking-widest text-amber-200/90 uppercase">Buku PDF</span>
+                </span>
+              </div>
+              <span className="text-xs font-bold tracking-wide text-white/30 uppercase">
+                {formatDate(book.createdAt)}
+              </span>
+            </div>
+          </div>
 
-      {/* Edit Dialog */}
-      <Dialog
-        open={editDialogOpen}
-        onClose={() => setEditDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            backgroundColor: '#1e1e1e',
-            color: '#ffffff',
-          },
-        }}
-      >
-        <DialogTitle sx={{ borderBottom: '1px solid #333333' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h6">Edit Buku</Typography>
-            <IconButton onClick={() => setEditDialogOpen(false)} size="small" sx={{ color: '#b0b0b0' }}>
-              <CloseIcon />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
-          <TextField
-            fullWidth
-            label="Judul Buku"
-            value={editTitle}
-            onChange={(e) => setEditTitle(e.target.value)}
-            margin="normal"
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                color: '#ffffff',
-                '& fieldset': { borderColor: '#404040' },
-                '&:hover fieldset': { borderColor: '#b0b0b0' },
-              },
-              '& .MuiInputLabel-root': { color: '#b0b0b0' },
-            }}
-          />
-          <TextField
-            fullWidth
-            label="Deskripsi"
-            value={editDescription}
-            onChange={(e) => setEditDescription(e.target.value)}
-            margin="normal"
-            multiline
-            rows={4}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                color: '#ffffff',
-                '& fieldset': { borderColor: '#404040' },
-                '&:hover fieldset': { borderColor: '#b0b0b0' },
-              },
-              '& .MuiInputLabel-root': { color: '#b0b0b0' },
-            }}
-          />
-        </DialogContent>
-        <DialogActions sx={{ borderTop: '1px solid #333333', p: 2 }}>
-          <Button
-            onClick={() => setEditDialogOpen(false)}
-            sx={{ color: '#b0b0b0' }}
-          >
-            Batal
-          </Button>
-          <Button
-            onClick={handleEdit}
-            variant="contained"
-            disabled={editLoading}
-            sx={{
-              backgroundColor: '#5599ff',
-              '&:hover': { backgroundColor: '#4488ee' },
-            }}
-          >
-            {editLoading ? 'Menyimpan...' : 'Simpan'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Card>
+          {/* Book Menu Button */}
+          {currentUser?.id === book.authorId && (
+            <div className="relative" ref={menuRef}>
+              <button 
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="p-2 text-white/30 hover:text-white transition-colors rounded-full hover:bg-white/5"
+              >
+                <MoreHorizontal className="w-5 h-5" />
+              </button>
+
+              <AnimatePresence>
+                {isMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="absolute right-0 mt-2 w-32 bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl shadow-lg overflow-hidden z-20"
+                  >
+                    <button 
+                      onClick={() => { setIsMenuOpen(false); setEditTitle(book.title); setEditDescription(book.description); setEditDialogOpen(true); }}
+                      className="w-full flex items-center gap-2 px-4 py-3 text-sm font-bold tracking-widest text-white/70 hover:text-white hover:bg-white/5 transition-colors uppercase border-b border-white/5"
+                    >
+                      <Edit2 className="w-3.5 h-3.5 text-blue-400" /> Edit
+                    </button>
+                    <button 
+                      onClick={() => { setIsMenuOpen(false); handleDelete(); }}
+                      className="w-full flex items-center gap-2 px-4 py-3 text-sm font-bold tracking-widest text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors uppercase"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Hapus
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="pl-[52px]">
+          <h3 className="text-lg font-bold tracking-tight text-white mb-2">
+            {book.title}
+          </h3>
+          {book.description && (
+            <>
+              <p className="text-sm leading-[1.8] text-white/60 whitespace-pre-wrap italic">
+                {displayDescription}
+              </p>
+              {hasMoreDescription && (
+                <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="mt-2 text-sm font-bold tracking-wide text-amber-400 hover:text-amber-300 uppercase transition-colors"
+                >
+                  {isExpanded ? 'Sembunyikan' : 'Baca Selengkapnya...'}
+                </button>
+              )}
+            </>
+          )}
+
+          {/* PDF Download/Open Cards */}
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <a 
+              href={book.pdfUrl}
+              download
+              className="flex items-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl text-sm font-bold tracking-wide text-white/80 hover:text-white transition-all uppercase shadow-lg active:scale-95 group"
+            >
+              <Download className="w-4 h-4 text-white/50 group-hover:text-white transition-colors" />
+              Download PDF
+            </a>
+            <a 
+              href={book.pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-b from-amber-500/80 to-amber-600/80 hover:from-amber-400 hover:to-amber-500 border border-amber-400/50 rounded-xl text-sm font-bold tracking-wide text-white uppercase shadow-lg transition-all active:scale-95"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Buka PDF
+            </a>
+            <span className="text-xs font-bold tracking-widest text-white/30 uppercase ml-2">
+              {(book.fileSize / 1024 / 1024).toFixed(2)} MB
+            </span>
+          </div>
+
+          {/* Interaction Bar */}
+          <div className="flex items-center gap-6 mt-6">
+            <button 
+              onClick={handleLike}
+              className={`flex items-center gap-2 text-sm font-bold tracking-widest transition-colors ${liked ? 'text-red-500' : 'text-white/40 hover:text-white/80'}`}
+            >
+              <Heart className={`w-5 h-5 ${liked ? 'fill-red-500' : ''}`} />
+              <span className="">{likes}</span>
+            </button>
+            <button 
+              onClick={() => setShowComments(!showComments)}
+              className="flex items-center gap-2 text-sm font-bold tracking-widest text-white/40 hover:text-white/80 transition-colors"
+            >
+              <MessageCircle className="w-5 h-5" />
+              <span className="">{comments?.length || 0}</span>
+            </button>
+          </div>
+
+          {/* Comments Section */}
+          <AnimatePresence>
+            {showComments && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden mt-4"
+              >
+                <div className="pt-4 border-t border-white/5 space-y-4">
+                  
+                  {/* Comments List */}
+                  <div className="max-h-[300px] overflow-y-auto custom-scrollbar pr-2 space-y-4">
+                    {comments?.length > 0 ? (
+                      comments.map((comment: any) => {
+                        const commentAuthorName = comment.author?.username || comment.author?.fullName || 'Anonim';
+                        const commentAuthorId = comment.author?.id;
+                        const isCommentOwner = currentUser?.id === commentAuthorId;
+                        const isEditing = editingCommentId === comment.id;
+
+                        return (
+                          <div key={comment.id} className="flex gap-3 group/comment relative">
+                            <div className="w-8 h-8 rounded-full overflow-hidden bg-black border border-white/10 shrink-0">
+                              {comment.author?.avatar ? (
+                                <img src={comment.author.avatar} alt="avatar" className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="flex items-center justify-center w-full h-full text-sm font-bold text-white/50">
+                                  {commentAuthorName.charAt(0).toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-start">
+                                <span className="text-sm font-bold text-white/80">{commentAuthorName}</span>
+                                
+                                {/* Comment Actions */}
+                                {isCommentOwner && !isEditing && (
+                                  <div className="relative" ref={activeCommentMenuId === comment.id ? menuRef : null}>
+                                    <button 
+                                      onClick={() => setActiveCommentMenuId(activeCommentMenuId === comment.id ? null : comment.id)}
+                                      className="p-1 text-white/20 hover:text-white transition-colors opacity-0 group-hover/comment:opacity-100 focus:opacity-100"
+                                    >
+                                      <MoreHorizontal className="w-3.5 h-3.5" />
+                                    </button>
+                                    
+                                    <AnimatePresence>
+                                      {activeCommentMenuId === comment.id && (
+                                        <motion.div
+                                          initial={{ opacity: 0, scale: 0.95 }}
+                                          animate={{ opacity: 1, scale: 1 }}
+                                          exit={{ opacity: 0, scale: 0.95 }}
+                                          className="absolute right-0 top-6 w-24 bg-black/40 backdrop-blur-md border border-white/10 rounded-lg shadow-xl overflow-hidden z-20"
+                                        >
+                                          <button 
+                                            onClick={() => { setActiveCommentMenuId(null); setEditingCommentId(comment.id); setEditCommentText(comment.content || comment.text); }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-white/70 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5"
+                                          >
+                                            Edit
+                                          </button>
+                                          <button 
+                                            onClick={() => { setActiveCommentMenuId(null); handleDeleteComment(comment.id); }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                                          >
+                                            Hapus
+                                          </button>
+                                        </motion.div>
+                                      )}
+                                    </AnimatePresence>
+                                  </div>
+                                )}
+                              </div>
+
+                              {isEditing ? (
+                                <div className="mt-1">
+                                  <textarea
+                                    value={editCommentText}
+                                    onChange={(e) => setEditCommentText(e.target.value)}
+                                    className="w-full bg-black/40 border border-black/50 border-t-black/80 border-b-white/10 rounded-xl p-3 text-sm text-white placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-white/20 shadow-inner min-h-[60px]"
+                                  />
+                                  <div className="flex gap-2 mt-2">
+                                    <button 
+                                      onClick={() => handleEditComment(comment.id)}
+                                      className="px-3 py-1.5 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-blue-500/30 transition-colors"
+                                    >
+                                      Simpan
+                                    </button>
+                                    <button 
+                                      onClick={() => setEditingCommentId(null)}
+                                      className="px-3 py-1.5 bg-white/5 text-white/50 border border-white/10 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-colors"
+                                    >
+                                      Batal
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="text-sm text-white/60 mt-0.5 leading-relaxed">{comment.content || comment.text}</p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <p className="text-sm text-white/30 text-center py-4 font-medium tracking-widest uppercase">Belum ada komentar</p>
+                    )}
+                  </div>
+
+                  {/* Add Comment Input */}
+                  <form onSubmit={handleAddComment} className="flex gap-2 mt-2">
+                    <input
+                      type="text"
+                      placeholder="Tulis komentar..."
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      className="flex-1 bg-black/40 border border-black/50 border-t-black/80 border-b-white/10 rounded-full px-4 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-white/20 shadow-inner"
+                    />
+                    <button
+                      type="submit"
+                      disabled={loading || !commentText.trim()}
+                      className="w-9 h-9 rounded-full bg-gradient-to-b from-white/15 to-white/5 border border-white/10 flex items-center justify-center text-white/80 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg"
+                    >
+                      <Send className="w-3.5 h-3.5 -ml-0.5" />
+                    </button>
+                  </form>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Edit Book Modal (Titanium Glass) */}
+      <AnimatePresence>
+        {editDialogOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setEditDialogOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-md"
+            ></motion.div>
+
+            {/* Modal Body */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-lg bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl shadow-lg overflow-hidden flex flex-col"
+            >
+
+              <div className="relative z-10 flex justify-between items-center p-6 border-b border-white/10 shadow-lg">
+                <h2 className="text-sm font-bold tracking-wider text-white uppercase">Edit Buku PDF</h2>
+                <button onClick={() => setEditDialogOpen(false)} className="text-white/40 hover:text-white transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="relative z-10 p-6 space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold tracking-wider text-white/40 uppercase ml-2">Judul Buku</label>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="w-full bg-black/40 border border-black/50 border-t-black/80 border-b-white/10 rounded-2xl px-5 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/20 shadow-inner"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold tracking-wider text-white/40 uppercase ml-2">Deskripsi</label>
+                  <textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    rows={4}
+                    className="w-full bg-black/40 border border-black/50 border-t-black/80 border-b-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/20 shadow-inner custom-scrollbar resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="relative z-10 p-6 border-t border-white/10 shadow-lg flex justify-end gap-3 bg-white/[0.02]">
+                <button
+                  onClick={() => setEditDialogOpen(false)}
+                  className="px-5 py-2.5 text-sm font-bold tracking-wider text-white/50 hover:text-white uppercase transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleEdit}
+                  disabled={editLoading}
+                  className="px-6 py-2.5 bg-gradient-to-b from-blue-500/80 to-blue-600/80 hover:from-blue-400 hover:to-blue-500 border border-blue-400/50 rounded-xl text-sm font-bold tracking-wider text-white uppercase shadow-lg transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {editLoading ? 'Menyimpan...' : 'Simpan'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

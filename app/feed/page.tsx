@@ -3,19 +3,13 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Loader2, AlertCircle, Sparkles, Image as ImageIcon, Book, PenTool } from 'lucide-react';
+
 import UnifiedUploadForm from '@/app/components/UnifiedUploadForm';
 import PostCard from '@/app/components/PostCard';
 import BookCard from '@/app/components/BookCard';
 import ImageCard from '@/app/components/ImageCard';
-import {
-  Container,
-  Box,
-  Paper,
-  Typography,
-  CircularProgress,
-  Alert,
-  Button,
-} from '@mui/material';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -37,15 +31,9 @@ export default function FeedPage() {
     if (userData) {
       setUser(JSON.parse(userData));
     }
-    // Load content regardless of login status
     fetchAllContent(1, true);
   }, [router]);
 
-  useEffect(() => {
-    // Remove dependency on user for fetching content
-  }, []);
-
-  // Infinite scroll observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -70,46 +58,34 @@ export default function FeedPage() {
 
   const fetchAllContent = async (pageNum: number, isInitial = false) => {
     try {
-      if (isInitial) {
-        setLoading(true);
-      } else {
-        setLoadingMore(true);
-      }
+      if (isInitial) setLoading(true);
+      else setLoadingMore(true);
       setError('');
-      
-      // Fetch semua konten secara paralel dengan pagination
+
       const [postsRes, booksRes, imagesRes] = await Promise.all([
         axios.get(`/api/posts?page=${pageNum}&limit=10`),
         axios.get(`/api/books?page=${pageNum}&limit=5`),
         axios.get(`/api/upload/images?page=${pageNum}&limit=5`),
       ]);
 
-      // Gabungkan semua konten dan tambahkan tipe
       const newItems = [
         ...postsRes.data.posts.map((item: any) => ({ ...item, contentType: 'post' })),
         ...booksRes.data.books.map((item: any) => ({ ...item, contentType: 'book' })),
         ...imagesRes.data.images.map((item: any) => ({ ...item, contentType: 'image' })),
       ];
 
-      // Sort berdasarkan tanggal terbaru
       newItems.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      
-      // Ambil 20 item pertama untuk batch ini
       const limitedItems = newItems.slice(0, ITEMS_PER_PAGE);
-      
-      if (isInitial) {
-        setFeedItems(limitedItems);
-      } else {
-        setFeedItems(prev => [...prev, ...limitedItems]);
-      }
 
-      // Check apakah masih ada data
+      if (isInitial) setFeedItems(limitedItems);
+      else setFeedItems(prev => [...prev, ...limitedItems]);
+
       const totalFetched = postsRes.data.posts.length + booksRes.data.books.length + imagesRes.data.images.length;
       setHasMore(totalFetched >= ITEMS_PER_PAGE);
-      
+
     } catch (err) {
       console.error('Error fetching content:', err);
-      setError('Gagal memuat konten');
+      setError('Gagal memuat konten. Periksa koneksi internet Anda.');
       setHasMore(false);
     } finally {
       setLoading(false);
@@ -136,156 +112,118 @@ export default function FeedPage() {
   };
 
   const renderFeedItem = (item: any) => {
-    // Render Post (Puisi/Karya)
     if (item.contentType === 'post') {
-      return (
-        <PostCard
-          key={item.id}
-          post={item}
-          onDelete={handleRefresh}
-        />
-      );
+      return <PostCard key={item.id} post={item} onDelete={handleRefresh} />;
     }
-
-    // Render Book
     if (item.contentType === 'book') {
-      return (
-        <BookCard
-          key={item.id}
-          book={item}
-          onDelete={handleRefresh}
-        />
-      );
+      return <BookCard key={item.id} book={item} onDelete={handleRefresh} />;
     }
-
-    // Render Image
     if (item.contentType === 'image') {
-      return (
-        <ImageCard
-          key={item.id}
-          image={item}
-          onDelete={handleRefresh}
-        />
-      );
+      return <ImageCard key={item.id} image={item} onDelete={handleRefresh} />;
     }
-
     return null;
   };
 
   if (!mounted) {
     return (
-      <Box sx={{ backgroundColor: '#121212', minHeight: '100vh' }}>
-        <Container maxWidth="md" sx={{ py: 4, px: 3 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-            <CircularProgress sx={{ color: '#ffffff' }} />
-          </Box>
-        </Container>
-      </Box>
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-white/50 animate-spin" />
+      </div>
     );
   }
 
   return (
-    <Box sx={{ backgroundColor: '#121212', minHeight: '100vh' }}>
-      <Container 
-        maxWidth="md" 
-        sx={{ 
-          py: { xs: 2, sm: 4 },
-          px: { xs: 1.5, sm: 3 },
-        }}
-      >
-        
+    <div className="min-h-screen relative overflow-hidden pb-32">
+      {/* Global Ambient Glow */}
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-white/5 rounded-full blur-[150px] pointer-events-none z-0" />
+
+      <main className="relative z-10 w-full max-w-2xl mx-auto px-4 pt-6 sm:pt-10">
+
         {user ? (
           <UnifiedUploadForm onUploadSuccess={handlePostCreated} />
         ) : (
-          <Paper sx={{ 
-            p: { xs: 2, sm: 3 }, 
-            backgroundColor: '#1e1e1e', 
-            borderRadius: 2,
-            mb: 3,
-            textAlign: 'center',
-          }}>
-            <Typography variant="h6" sx={{ color: '#ffffff', mb: 1 }}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-10 relative bg-[#0a0a0a]/60 backdrop-blur-3xl border border-white/10 rounded-3xl p-8 sm:p-10 text-center overflow-hidden shadow-2xl"
+          >
+            {/* Inner Glow */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-blue-500/20 rounded-full blur-[80px] pointer-events-none" />
+
+            <Sparkles className="w-8 h-8 text-white/80 mx-auto mb-4" />
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-3">
               Selamat Datang di Gallery DaVinci
-            </Typography>
-            <Typography variant="body2" sx={{ color: '#b0b0b0', mb: 2 }}>
-              Login untuk membagikan karya seni Anda
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
-              <Button
-                variant="contained"
+            </h2>
+            <p className="text-sm font-medium text-white/50 mb-8 max-w-md mx-auto leading-relaxed">
+              Bergabunglah dengan komunitas seniman digital. Bagikan puisi, buku bacaan, dan karya visual Anda ke dunia.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <button
                 onClick={() => router.push('/login')}
-                sx={{
-                  backgroundColor: '#ffffff',
-                  color: '#000000',
-                  '&:hover': { backgroundColor: '#e0e0e0' },
-                }}
+                className="w-full sm:w-auto px-6 py-2.5 rounded-2xl bg-white text-black text-sm font-semibold tracking-wider hover:scale-105 transition-transform active:scale-95"
               >
-                Login
-              </Button>
-              <Button
-                variant="outlined"
+                Masuk
+              </button>
+              <button
                 onClick={() => router.push('/register')}
-                sx={{
-                  borderColor: '#404040',
-                  color: '#ffffff',
-                  '&:hover': { borderColor: '#ffffff', backgroundColor: '#333333' },
-                }}
+                className="w-full sm:w-auto px-6 py-2.5 rounded-2xl bg-[#050505] text-white text-sm font-semibold tracking-wider border border-white/20 hover:bg-white/10 transition-colors active:scale-95"
               >
                 Daftar
-              </Button>
-            </Box>
-          </Paper>
+              </button>
+            </div>
+          </motion.div>
         )}
 
-        {error && (
-          <Alert severity="error" sx={{ mt: 3, mb: 3 }}>
-            {error}
-          </Alert>
-        )}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+              className="mb-8 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center gap-3 backdrop-blur-md"
+            >
+              <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+              <p className="text-sm text-red-400 font-medium">{error}</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-            <CircularProgress sx={{ color: '#ffffff' }} />
-          </Box>
+          <div className="flex justify-center py-20">
+            <Loader2 className="w-8 h-8 text-white/40 animate-spin" />
+          </div>
         ) : feedItems.length > 0 ? (
-          <>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 3 }}>
-              {feedItems.map((item) => renderFeedItem(item))}
-            </Box>
+          <div className="flex flex-col gap-6 sm:gap-8">
+            {feedItems.map((item) => renderFeedItem(item))}
 
-            {/* Infinite scroll trigger */}
-            <div ref={observerTarget} style={{ height: '20px', margin: '20px 0' }}>
-              {loadingMore && (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                  <CircularProgress size={30} sx={{ color: '#ffffff' }} />
-                </Box>
-              )}
+            <div ref={observerTarget} className="h-20 w-full flex items-center justify-center">
+              {loadingMore && <Loader2 className="w-6 h-6 text-white/40 animate-spin" />}
             </div>
 
             {!hasMore && feedItems.length > 0 && (
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  textAlign: 'center', 
-                  color: '#808080', 
-                  py: 4 
-                }}
-              >
-                Tidak ada konten lagi
-              </Typography>
+              <div className="py-10 text-center">
+                <div className="w-12 h-[1px] bg-white/20 mx-auto mb-4" />
+                <p className="text-xs font-bold tracking-widest uppercase text-white/30">
+                  AKHIR DARI GALERI
+                </p>
+              </div>
             )}
-          </>
+          </div>
         ) : (
-          <Paper sx={{ backgroundColor: '#1e1e1e', p: 6, textAlign: 'center', borderRadius: 2, mt: 3 }}>
-            <Typography variant="h6" sx={{ color: '#b0b0b0', mb: 2 }}>
-              Belum ada konten
-            </Typography>
-            <Typography variant="body2" sx={{ color: '#808080' }}>
-              Mulai bagikan puisi, buku, atau gambar Anda!
-            </Typography>
-          </Paper>
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            className="text-center py-20 bg-[#0a0a0a]/40 backdrop-blur-[64px] border border-white/5 rounded-3xl"
+          >
+            <div className="flex justify-center gap-4 mb-6 opacity-30">
+              <PenTool className="w-6 h-6" />
+              <Book className="w-6 h-6" />
+              <ImageIcon className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-white/80 mb-2 tracking-wide">Belum ada karya</h3>
+            <p className="text-sm text-white/40 font-medium">Jadilah yang pertama mengabadikan mahakarya di sini.</p>
+          </motion.div>
         )}
-      </Container>
-    </Box>
+
+      </main>
+    </div>
   );
 }
