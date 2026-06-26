@@ -58,11 +58,6 @@ a {
   transition: all 0.3s ease;
 }
 
-/* Focus states for accessibility */
-*:focus {
-  outline: 2px solid #a855f7;
-  outline-offset: 2px;
-}
 
 /* Custom animations */
 @keyframes fadeIn {
@@ -93,4 +88,28 @@ a {
 
 .slide-up {
   animation: slideUp 0.3s ease;
+}
+
+/* Parchment Custom Scrollbar */
+.custom-scrollbar-parchment::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar-parchment::-webkit-scrollbar-track {
+  background: rgba(217, 185, 123, 0.2);
+  border-radius: 4px;
+}
+.custom-scrollbar-parchment::-webkit-scrollbar-thumb {
+  background: #b08d57;
+  border-radius: 4px;
+}
+.custom-scrollbar-parchment::-webkit-scrollbar-thumb:hover {
+  background: #8b5a2b;
+}
+/* Remove default browser focus outline for buttons and links */
+a:focus, button:focus, input:focus, textarea:focus {
+  outline: none !important;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent !important;
 }

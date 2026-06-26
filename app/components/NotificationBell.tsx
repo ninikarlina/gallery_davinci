@@ -205,7 +205,7 @@ export default function NotificationBell() {
 
                       <button
                         onClick={(e) => handleDeleteNotification(notification.id, e)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-white/30 hover:text-red-400 hover:bg-red-500/10 rounded-full transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-white/30 hover:text-red-400 hover:bg-red-500/10 rounded-full transition-all"
                         title="Hapus notifikasi"
                       >
                         <Trash2 className="w-4 h-4 drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]" />

@@ -6,7 +6,7 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Loader2, AlertCircle, Edit2, Camera, Trash2, Calendar, LayoutGrid, Type, AtSign, Mail, 
-  CheckCircle2, Plus, PenTool, Book, Image as ImageIcon
+  CheckCircle2, Plus, PenTool, Book, Image as ImageIcon, LogOut
 } from 'lucide-react';
 
 import UnifiedUploadForm from '@/app/components/UnifiedUploadForm';
@@ -115,6 +115,12 @@ export default function ProfilePage() {
       console.error('Error updating profile:', err);
       setError('Gagal memperbarui profil');
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/login';
   };
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -230,14 +236,14 @@ export default function ProfilePage() {
                 )}
 
                 {isOwnProfile && !uploadingAvatar && (
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center gap-2 z-10 backdrop-blur-sm">
-                    <label className="cursor-pointer p-2 hover:bg-white/20 rounded-full transition-colors text-white">
-                      <Camera className="w-5 h-5" />
+                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 z-10 bg-gradient-to-t from-black/80 via-black/30 to-transparent pt-6 pb-2">
+                    <label className="cursor-pointer p-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full transition-colors text-white border border-white/20 shadow-lg">
+                      <Camera className="w-4 h-4" />
                       <input type="file" hidden accept="image/*" onChange={handleAvatarUpload} />
                     </label>
                     {user.avatar && (
-                      <button onClick={handleDeleteAvatar} className="p-2 hover:bg-red-500/50 rounded-full transition-colors text-white">
-                        <Trash2 className="w-5 h-5" />
+                      <button onClick={handleDeleteAvatar} className="p-2 bg-red-500/20 hover:bg-red-500/40 backdrop-blur-md rounded-full transition-colors text-red-100 border border-red-500/20 shadow-lg">
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     )}
                   </div>
@@ -273,12 +279,20 @@ export default function ProfilePage() {
                   </div>
 
                   {isOwnProfile && (
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="mt-6 w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-bold tracking-wider text-white uppercase transition-colors flex items-center justify-center gap-2"
-                    >
-                      <Edit2 className="w-4 h-4" /> Edit Profil
-                    </button>
+                    <div className="flex gap-3 mt-6">
+                      <button
+                        onClick={() => setIsEditing(true)}
+                        className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-bold tracking-wider text-white uppercase transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Edit2 className="w-4 h-4" /> Edit Profil
+                      </button>
+                      <button
+                        onClick={handleLogout}
+                        className="flex-1 py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl text-sm font-bold tracking-wider text-red-400 uppercase transition-colors flex items-center justify-center gap-2"
+                      >
+                        <LogOut className="w-4 h-4" /> Logout
+                      </button>
+                    </div>
                   )}
                 </>
               ) : (
@@ -377,7 +391,7 @@ export default function ProfilePage() {
             </div>
           ) : (
             allContent.map((content) => (
-              <div key={content.id} className="bg-[#0a0a0a]/40 backdrop-blur-xl border border-white/5 rounded-3xl p-4 sm:p-6 shadow-xl">
+              <div key={content.id}>
                 {content.contentType === 'post' && <PostCard post={content} onDelete={fetchUserProfile} onRefresh={fetchUserProfile} />}
                 {content.contentType === 'book' && <BookCard book={content} onDelete={fetchUserProfile} onRefresh={fetchUserProfile} />}
                 {content.contentType === 'image' && <ImageCard image={content} onDelete={fetchUserProfile} onRefresh={fetchUserProfile} />}
