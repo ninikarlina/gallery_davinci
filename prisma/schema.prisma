@@ -106,6 +106,10 @@ model Comment {
 
   imageId   String?
   image     Image?     @relation(fields: [imageId], references: [id], onDelete: Cascade)
+
+  parentId  String?
+  parent    Comment?   @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[]  @relation("CommentReplies")
 }
 
 model Like {

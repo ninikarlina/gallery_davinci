@@ -23,7 +23,7 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const { text } = await req.json();
+    const { text, parentId } = await req.json();
 
     if (!text) {
       return NextResponse.json(
@@ -43,6 +43,7 @@ export async function POST(
         content: text,
         authorId: decoded.userId,
         postId: id,
+        parentId: parentId || null,
       },
       include: {
         author: { select: { username: true, fullName: true } },
@@ -76,7 +77,7 @@ export async function POST(
     });
 
     return NextResponse.json(
-      { message: 'Comment added', post: updatedPost },
+      { message: 'Comment added', post: updatedPost, comment },
       { status: 201 }
     );
   } catch (error) {
