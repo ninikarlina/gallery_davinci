@@ -149,8 +149,6 @@ export default function FeedPage() {
           >
             {/* Inner Glow */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-blue-500/20 rounded-full blur-[80px] pointer-events-none" />
-
-            <Sparkles className="w-8 h-8 text-white/80 mx-auto mb-4" />
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-3">
               Selamat Datang di Gallery DaVinci
             </h2>
