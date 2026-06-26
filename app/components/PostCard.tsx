@@ -122,10 +122,23 @@ export default function PostCard({ post, onDelete, onRefresh }: PostCardProps) {
   const authorInitial = authorName.charAt(0).toUpperCase();
   const authorId = post.author?.id;
 
-  const contentLines = post.content.split('\n');
-  const hasMoreContent = contentLines.length > 10;
-  const displayContent = isExpanded ? post.content : (hasMoreContent ? contentLines.slice(0, 10).join('\n') : post.content);
-
+  const MAX_CHARS = 250;
+  const contentLines = (post.content || '').split('\n');
+  const isLong = (post.content || '').length > MAX_CHARS || contentLines.length > 5;
+  const hasMoreContent = isLong;
+  
+  let truncatedContent = post.content || '';
+  if (isLong && !isExpanded) {
+    if (contentLines.length > 5) {
+      truncatedContent = contentLines.slice(0, 5).join('\n');
+    }
+    if (truncatedContent.length > MAX_CHARS) {
+      truncatedContent = truncatedContent.substring(0, MAX_CHARS) + '...';
+    } else if (contentLines.length > 5) {
+      truncatedContent += '...';
+    }
+  }
+  const displayContent = isExpanded ? post.content : truncatedContent;
   return (
     <>
       <div className="relative pb-8 pt-4 border-b border-white/10 shadow-lg group/post">
@@ -242,29 +255,30 @@ export default function PostCard({ post, onDelete, onRefresh }: PostCardProps) {
             </button>
           </div>
 
-          {/* Comments Dropdown */}
-          <AnimatePresence>
-            {showComments && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden mt-4"
-              >
-                <div className="pt-4 border-t border-white/10">
-                  <CommentPanel 
-                    comments={comments} 
-                    setComments={setComments} 
-                    targetId={post.id} 
-                    targetType="post" 
-                    currentUser={currentUser} 
-                    token={token || ''} 
-                  />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
+
+        {/* Comments Dropdown */}
+        <AnimatePresence>
+          {showComments && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden mt-4 -mx-4 sm:mx-0"
+            >
+              <div className="pt-4 border-t border-white/10 sm:px-2">
+                <CommentPanel 
+                  comments={comments} 
+                  setComments={setComments} 
+                  targetId={post.id} 
+                  targetType="post" 
+                  currentUser={currentUser} 
+                  token={token || ''} 
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Edit Post Modal (Titanium Glass) */}

@@ -121,10 +121,23 @@ export default function BookCard({ book, onDelete, onRefresh }: BookCardProps) {
   const authorInitial = authorName.charAt(0).toUpperCase();
   const authorId = book.author?.id;
 
-  const descriptionLines = book.description ? book.description.split('\n') : [];
-  const hasMoreDescription = descriptionLines.length > 10;
-  const displayDescription = isExpanded ? book.description : (hasMoreDescription ? descriptionLines.slice(0, 10).join('\n') : book.description);
-
+  const MAX_CHARS = 250;
+  const descriptionLines = (book.description || '').split('\n');
+  const isLong = (book.description || '').length > MAX_CHARS || descriptionLines.length > 5;
+  const hasMoreDescription = isLong;
+  
+  let truncatedDescription = book.description || '';
+  if (isLong && !isExpanded) {
+    if (descriptionLines.length > 5) {
+      truncatedDescription = descriptionLines.slice(0, 5).join('\n');
+    }
+    if (truncatedDescription.length > MAX_CHARS) {
+      truncatedDescription = truncatedDescription.substring(0, MAX_CHARS) + '...';
+    } else if (descriptionLines.length > 5) {
+      truncatedDescription += '...';
+    }
+  }
+  const displayDescription = isExpanded ? book.description : truncatedDescription;
   return (
     <>
       <div className="relative pb-8 pt-4 border-b border-white/10 shadow-lg group/post">
@@ -221,22 +234,22 @@ export default function BookCard({ book, onDelete, onRefresh }: BookCardProps) {
           )}
 
           {/* PDF Download/Open Cards */}
-          <div className="mt-5 flex flex-wrap items-center gap-3">
+          <div className="mt-4 flex flex-wrap items-center gap-2.5">
             <a 
               href={book.pdfUrl}
               download
-              className="flex items-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl text-sm font-bold tracking-wide text-white/80 hover:text-white transition-all uppercase shadow-lg active:scale-95 group"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-lg text-xs font-bold tracking-wide text-white/80 hover:text-white transition-all uppercase shadow-md active:scale-95 group"
             >
-              <Download className="w-4 h-4 text-white/50 group-hover:text-white transition-colors" />
+              <Download className="w-3.5 h-3.5 text-white/50 group-hover:text-white transition-colors" />
               Download PDF
             </a>
             <a 
               href={book.pdfUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-b from-amber-500/80 to-amber-600/80 hover:from-amber-400 hover:to-amber-500 border border-amber-400/50 rounded-xl text-sm font-bold tracking-wide text-white uppercase shadow-lg transition-all active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-b from-amber-500/80 to-amber-600/80 hover:from-amber-400 hover:to-amber-500 border border-amber-400/50 rounded-lg text-xs font-bold tracking-wide text-white uppercase shadow-md transition-all active:scale-95"
             >
-              <ExternalLink className="w-4 h-4" />
+              <ExternalLink className="w-3.5 h-3.5" />
               Buka PDF
             </a>
             <span className="text-xs font-bold tracking-widest text-white/30 uppercase ml-2">
@@ -262,29 +275,30 @@ export default function BookCard({ book, onDelete, onRefresh }: BookCardProps) {
             </button>
           </div>
 
-          {/* Comments Dropdown */}
-          <AnimatePresence>
-            {showComments && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden mt-4"
-              >
-                <div className="pt-4 border-t border-white/10">
-                  <CommentPanel 
-                    comments={comments} 
-                    setComments={setComments} 
-                    targetId={book.id} 
-                    targetType="book" 
-                    currentUser={currentUser} 
-                    token={token || ''} 
-                  />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
+
+        {/* Comments Dropdown */}
+        <AnimatePresence>
+          {showComments && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden mt-4 -mx-4 sm:mx-0"
+            >
+              <div className="pt-4 border-t border-white/10 sm:px-2">
+                <CommentPanel 
+                  comments={comments} 
+                  setComments={setComments} 
+                  targetId={book.id} 
+                  targetType="book" 
+                  currentUser={currentUser} 
+                  token={token || ''} 
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Edit Book Modal (Titanium Glass) */}

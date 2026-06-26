@@ -169,10 +169,8 @@ export default function CommentPanel({
 
       {/* Silk Brocade & Rice Paper */}
       <div 
-        className="relative pt-8 pb-10 px-4 sm:px-6 z-10"
+        className="relative pt-8 pb-10 px-4 sm:px-6 z-10 border-l-[6px] border-r-[6px] sm:border-l-[14px] sm:border-r-[14px] border-[#8b0000]"
         style={{
-          borderLeft: '14px solid #8b0000',
-          borderRight: '14px solid #8b0000',
           backgroundColor: '#FFF8E7', // Lighter rice paper for Chinese scrolls
           backgroundImage: `
             url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.03' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E")

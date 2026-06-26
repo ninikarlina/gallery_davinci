@@ -128,10 +128,23 @@ export default function ImageCard({ image, onDelete, onRefresh }: ImageCardProps
   const authorInitial = authorName.charAt(0).toUpperCase();
   const authorId = image.author?.id;
 
-  const captionLines = image.caption ? image.caption.split('\n') : [];
-  const hasMoreCaption = captionLines.length > 10;
-  const displayCaption = isExpanded ? image.caption : (hasMoreCaption ? captionLines.slice(0, 10).join('\n') : image.caption);
-
+  const MAX_CHARS = 250;
+  const captionLines = (image.caption || '').split('\n');
+  const isLong = (image.caption || '').length > MAX_CHARS || captionLines.length > 5;
+  const hasMoreCaption = isLong;
+  
+  let truncatedCaption = image.caption || '';
+  if (isLong && !isExpanded) {
+    if (captionLines.length > 5) {
+      truncatedCaption = captionLines.slice(0, 5).join('\n');
+    }
+    if (truncatedCaption.length > MAX_CHARS) {
+      truncatedCaption = truncatedCaption.substring(0, MAX_CHARS) + '...';
+    } else if (captionLines.length > 5) {
+      truncatedCaption += '...';
+    }
+  }
+  const displayCaption = isExpanded ? image.caption : truncatedCaption;
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     setIsDragging(true);
@@ -345,29 +358,30 @@ export default function ImageCard({ image, onDelete, onRefresh }: ImageCardProps
             </button>
           </div>
 
-          {/* Comments Dropdown */}
-          <AnimatePresence>
-            {showComments && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden mt-4"
-              >
-                <div className="pt-4 border-t border-white/10">
-                  <CommentPanel 
-                    comments={comments} 
-                    setComments={setComments} 
-                    targetId={image.id} 
-                    targetType="image" 
-                    currentUser={currentUser} 
-                    token={token || ''} 
-                  />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
+
+        {/* Comments Dropdown */}
+        <AnimatePresence>
+          {showComments && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden mt-4 -mx-4 sm:mx-0"
+            >
+              <div className="pt-4 border-t border-white/10 sm:px-2">
+                <CommentPanel 
+                  comments={comments} 
+                  setComments={setComments} 
+                  targetId={image.id} 
+                  targetType="image" 
+                  currentUser={currentUser} 
+                  token={token || ''} 
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Edit Image Modal (Titanium Glass) */}
